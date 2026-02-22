@@ -8,20 +8,20 @@ const fieldSchema = mongoose.Schema(
             type: String,
             required: [true, 'El nombre del estudiante es requerido'],
             trim: true,
-            maxLength: [100, 'El nombre no puede exceder 100 caracteres']
+            maxLength: [50, 'El nombre no puede exceder 50 caracteres']
         },
         fieldSurname: {
             type: String,
             required: [true, 'El apellido del estudiante es requerido'],
             trim: true,
-            maxLength: [100, 'El apellido no puede exceder 100 caracteres']
+            maxLength: [50, 'El apellido no puede exceder 50 caracteres']
         },
         idCard: {
             type: String,
             required: [true, 'El carnet de identidad es requerido'],
             trim: true,
             unique: true,
-            maxLength: [20, 'El carnet no puede exceder 20 caracteres']
+            maxLength: [7, 'El carnet no puede exceder 7 caracteres']
         },
         grade: {
             type: String,
