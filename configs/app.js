@@ -9,6 +9,7 @@ import { corsOptions } from './cors-configuration.js';
 import { helmetConfiguration } from './helmet-configuration.js';
 import { requestLimit } from '../middlewares/request-limit.js';
 import { errorHandler } from '../middlewares/handle-errors.js';
+import fieldRouter from '../src/fields/field.routes.js';
 
 const BASE_PATH = '/AISentinelAdmin/v1';
 
@@ -31,6 +32,8 @@ const routes = (app) => {
         })
     })
 
+    app.use(`${BASE_PATH}/fields`, fieldRouter);
+
     app.use((req, res) => {
         res.status(404).json({
             success: false,
@@ -42,7 +45,7 @@ const routes = (app) => {
 export const initServer = async () => {
     const app = express();
     const PORT = process.env.PORT;
-    app.set('trus proxy', 1);
+    app.set('trust proxy', 1);
 
     try {
         await dbConnection();

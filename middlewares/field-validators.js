@@ -1,13 +1,8 @@
 import { body, param } from 'express-validator';
 import { checkValidators } from './checkValidators.js';
-import { validateJWT } from './validate-JWT.js';
-import { requireRole } from './validate-role.js';
-import { ROLES } from '../src/config/roles.js';
 
 // Validaciones para crear estudiante
 export const validateCreateField = [
-    validateJWT,
-    requireRole(ROLES.ADMIN, ROLES.COORDINATOR),
     body('fieldName')
         .trim()
         .notEmpty()
@@ -40,8 +35,6 @@ export const validateCreateField = [
 
 // Validaciones para actualizar estudiante
 export const validateUpdateFieldRequest = [
-    validateJWT,
-    requireRole(ROLES.ADMIN, ROLES.COORDINATOR),
     param('id')
         .isMongoId()
         .withMessage('ID debe ser un ObjectId válido de MongoDB'),
@@ -73,11 +66,22 @@ export const validateUpdateFieldRequest = [
 
 // Validaciones para cambiar estado del estudiante
 export const validateFieldStatusChange = [
-    validateJWT,
-    requireRole(ROLES.ADMIN, ROLES.COORDINATOR),
     param('id')
         .isMongoId()
         .withMessage('ID debe ser un ObjectId válido de MongoDB'),
+    checkValidators,
+];
+
+// Validaciones para eliminar campo
+export const validateDeleteField = [
+    param('id')
+        .isMongoId()
+        .withMessage('ID debe ser un ObjectId válido de MongoDB'),
+    checkValidators,
+];
+
+// Validaciones para listar campos
+export const validateGetFields = [
     checkValidators,
 ];
 
@@ -86,5 +90,28 @@ export const validateGetFieldById = [
     param('id')
         .isMongoId()
         .withMessage('ID debe ser un ObjectId válido de MongoDB'),
+    checkValidators,
+];
+
+// Validaciones para operaciones por carnet
+export const validateByIdCard = [
+    param('idCard')
+        .trim()
+        .notEmpty().withMessage('El carnet es requerido')
+        .isLength({ max: 7 }).withMessage('El carnet no puede exceder 7 caracteres'),
+    checkValidators,
+];
+
+// Validaciones para actualizar por carnet
+export const validateUpdateByIdCard = [
+    param('idCard')
+        .trim()
+        .notEmpty().withMessage('El carnet es requerido')
+        .isLength({ max: 7 }).withMessage('El carnet no puede exceder 7 caracteres'),
+    body('fieldName').optional().trim().isLength({ max: 50 }).withMessage('El nombre no puede exceder 50 caracteres'),
+    body('fieldSurname').optional().trim().isLength({ max: 50 }).withMessage('El apellido no puede exceder 50 caracteres'),
+    body('idCard').optional().trim().isLength({ max: 7 }).withMessage('El carnet no puede exceder 7 caracteres'),
+    body('grade').optional().isIn(['1RO', '2DO', '3RO', '4TO', '5TO', '6TO']).withMessage('Grado no válido'),
+    body('photo').optional().isString().withMessage('La foto debe ser una cadena de texto'),
     checkValidators,
 ];

@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { changeFieldStatus, createField, getFieldById, getFields, updateField } from './field.controller.js';
+import { activateField, deactivateField, deleteField, createField, getFieldById, getFields, updateField, getFieldByIdCard, updateFieldByIdCard, activateFieldByIdCard, deactivateFieldByIdCard, deleteFieldByIdCard } from './field.controller.js';
 import { uploadFieldImage } from '../../middlewares/file-uploader.js';
-import { cleanUploaderFileOnFinish } from '../../middlewares/delete-file-on-error.js';
-import { validateCreateField, validateFieldStatusChange, validateGetFieldById, validateUpdateFieldRequest } from '../../middlewares/field-validators.js';
+import { cleanUploaderFileOnFinish, deleteFileOnError } from '../../middlewares/delete-file-on-error.js';
+import { validateCreateField, validateDeleteField, validateFieldStatusChange, validateGetFieldById, validateGetFields, validateUpdateFieldRequest, validateByIdCard, validateUpdateByIdCard } from '../../middlewares/field-validators.js';
 
 const router = Router();
 
@@ -16,10 +16,11 @@ router.post(
 
 router.get(
     '/get',
+    ...validateGetFields,
     getFields
 )
 
-router.get('/:id', validateGetFieldById, getFieldById);
+router.get('/:id', ...validateGetFieldById, getFieldById);
 
 // Rutas PUT - Requieren autenticación
 router.put(
@@ -29,6 +30,17 @@ router.put(
     validateUpdateFieldRequest,
     updateField
 );
-router.put('/:id/activate', validateFieldStatusChange, changeFieldStatus);
-router.put('/:id/deactivate', validateFieldStatusChange, changeFieldStatus);
+router.put('/:id/activate', validateFieldStatusChange, activateField);
+router.put('/:id/deactivate', validateFieldStatusChange, deactivateField);
+router.delete('/:id', ...validateDeleteField, deleteField);
+
+// Rutas por carnet (idCard)
+router.get('/idcard/:idCard', ...validateByIdCard, getFieldByIdCard);
+router.put('/idcard/:idCard', uploadFieldImage.single('photo'), cleanUploaderFileOnFinish, ...validateUpdateByIdCard, updateFieldByIdCard);
+router.put('/idcard/:idCard/activate', ...validateByIdCard, activateFieldByIdCard);
+router.put('/idcard/:idCard/deactivate', ...validateByIdCard, deactivateFieldByIdCard);
+router.delete('/idcard/:idCard', ...validateByIdCard, deleteFieldByIdCard);
+
+router.use(deleteFileOnError);
+
 export default router;
