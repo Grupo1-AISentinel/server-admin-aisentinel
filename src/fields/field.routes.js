@@ -8,7 +8,7 @@ const router = Router();
 
 router.post(
     '/create',
-    uploadFieldImage.single('image'),
+    uploadFieldImage.single('photo'),
     cleanUploaderFileOnFinish,
     validateCreateField,
     createField
@@ -24,7 +24,7 @@ router.get('/:id', validateGetFieldById, getFieldById);
 // Rutas PUT - Requieren autenticación
 router.put(
     '/:id',
-    uploadFieldImage.single('image'),
+    uploadFieldImage.single('photo'),
     cleanUploaderFileOnFinish,
     validateUpdateFieldRequest,
     updateField

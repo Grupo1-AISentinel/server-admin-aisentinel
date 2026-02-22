@@ -1,5 +1,5 @@
-import { parse } from 'dotenv';
 import Field from './field.model.js';
+import { cloudinary } from '../../middlewares/file-uploader.js';
 
 export const createField = async (req, res) => {
     try {

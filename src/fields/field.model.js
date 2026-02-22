@@ -35,6 +35,10 @@ const fieldSchema = mongoose.Schema(
             type: String,
             default: null,
         },
+        photo_public_id: {
+            type: String,
+            default: null,
+        },
         isActive: {
             type: Boolean,
             default: true
