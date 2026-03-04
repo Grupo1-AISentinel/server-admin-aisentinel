@@ -1,7 +1,6 @@
 import { body, param, query } from 'express-validator';
 import { checkValidators } from './checkValidators.js';
 
-// Campos comunes de usuario (para coordinador y admin)
 const userFields = [
     body('name')
         .trim()
@@ -32,7 +31,6 @@ const userFields = [
         .isLength({ max: 15 }).withMessage('El teléfono no puede exceder 15 caracteres'),
 ];
 
-// Validaciones para crear coordinador
 export const validateCreateCoordinator = [
     ...userFields,
     body('grade')
@@ -41,13 +39,11 @@ export const validateCreateCoordinator = [
     checkValidators,
 ];
 
-// Validaciones para crear administrador
 export const validateCreateAdmin = [
     ...userFields,
     checkValidators,
 ];
 
-// Validaciones para actualizar coordinador
 export const validateUpdateCoordinator = [
     param('id').isMongoId().withMessage('ID debe ser un ObjectId válido de MongoDB'),
     body('grade')
@@ -63,13 +59,11 @@ export const validateUpdateCoordinator = [
     checkValidators,
 ];
 
-// Validaciones para obtener/eliminar coordinador por ID
 export const validateCoordinatorId = [
     param('id').isMongoId().withMessage('ID debe ser un ObjectId válido de MongoDB'),
     checkValidators,
 ];
 
-// Validaciones para listar coordinadores
 export const validateGetCoordinators = [
     query('page')
         .optional()

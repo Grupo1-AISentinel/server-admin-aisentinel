@@ -3,9 +3,7 @@ import Coordinator from './coordinator.model.js';
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL;
 const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN;
 
-/**
- * Llama al authservice para crear un usuario internamente (ya activado, sin verificar email).
- */
+
 const createAuthUser = async (userData) => {
     const response = await fetch(`${AUTH_SERVICE_URL}/api/v1/internal/users`, {
         method: 'POST',
@@ -27,9 +25,7 @@ const createAuthUser = async (userData) => {
     return data;
 };
 
-/**
- * Llama al authservice para eliminar un usuario internamente.
- */
+
 const deleteAuthUser = async (authUserId) => {
     const response = await fetch(`${AUTH_SERVICE_URL}/api/v1/internal/users/${authUserId}`, {
         method: 'DELETE',
@@ -49,13 +45,7 @@ const deleteAuthUser = async (authUserId) => {
     return data;
 };
 
-// ─── COORDINADORES ───────────────────────────────────────────────────────────
 
-/**
- * POST /coordinators
- * Crea un usuario con rol Coordinador en el authservice
- * y su perfil de coordinador en este servicio.
- */
 export const createCoordinator = async (req, res, next) => {
     let authUserId = null;
     try {
@@ -74,7 +64,6 @@ export const createCoordinator = async (req, res, next) => {
 
         authUserId = authResult.data.id;
 
-        // 2. Crear perfil de coordinador en MongoDB
         const coordinator = new Coordinator({
             authUserId,
             firstName: name,
@@ -94,7 +83,6 @@ export const createCoordinator = async (req, res, next) => {
             },
         });
     } catch (error) {
-        // Si el coordinador ya fue creado en auth pero falló en mongo, revertir
         if (authUserId) {
             try {
                 await deleteAuthUser(authUserId);
@@ -106,11 +94,7 @@ export const createCoordinator = async (req, res, next) => {
     }
 };
 
-/**
- * POST /coordinators/admin
- * Crea únicamente un usuario con rol Administrador en el authservice
- * (no crea perfil en este servicio).
- */
+
 export const createAdmin = async (req, res, next) => {
     try {
         const { name, surname, username, email, password, phone } = req.body;
@@ -135,10 +119,7 @@ export const createAdmin = async (req, res, next) => {
     }
 };
 
-/**
- * GET /coordinators
- * Lista todos los coordinadores con paginación.
- */
+
 export const getCoordinators = async (req, res, next) => {
     try {
         const { page = 1, limit = 10, isActive, grade } = req.query;
@@ -172,10 +153,7 @@ export const getCoordinators = async (req, res, next) => {
     }
 };
 
-/**
- * GET /coordinators/:id
- * Obtiene un coordinador por su ID de MongoDB.
- */
+
 export const getCoordinatorById = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -198,11 +176,7 @@ export const getCoordinatorById = async (req, res, next) => {
     }
 };
 
-/**
- * PUT /coordinators/:id
- * Actualiza los datos del perfil de coordinador (grado, teléfono, isActive).
- * No modifica el usuario en authservice.
- */
+
 export const updateCoordinator = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -232,11 +206,7 @@ export const updateCoordinator = async (req, res, next) => {
     }
 };
 
-/**
- * DELETE /coordinators/:id
- * Elimina el coordinador de MongoDB Y el usuario del authservice.
- * Relación 1:1: si no existe uno, no existe el otro.
- */
+
 export const deleteCoordinator = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -249,10 +219,8 @@ export const deleteCoordinator = async (req, res, next) => {
             });
         }
 
-        // Eliminar en authservice primero
         await deleteAuthUser(coordinator.authUserId);
 
-        // Eliminar en MongoDB
         await coordinator.deleteOne();
 
         return res.status(200).json({
@@ -264,9 +232,7 @@ export const deleteCoordinator = async (req, res, next) => {
     }
 };
 
-/**
- * PUT /coordinators/:id/activate
- */
+
 export const activateCoordinator = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -286,9 +252,6 @@ export const activateCoordinator = async (req, res, next) => {
     }
 };
 
-/**
- * PUT /coordinators/:id/deactivate
- */
 export const deactivateCoordinator = async (req, res, next) => {
     try {
         const { id } = req.params;

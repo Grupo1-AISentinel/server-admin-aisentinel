@@ -5,7 +5,6 @@ export const createField = async (req, res, next) => {
     try {
         const fieldData = req.body;
 
-        // Si es coordinador, verificar que el grado del estudiante coincida con el suyo
         if (req.coordinatorGrade !== undefined && req.coordinatorGrade !== null) {
             if (fieldData.grade !== req.coordinatorGrade) {
                 return res.status(403).json({
@@ -242,7 +241,6 @@ export const updateFieldByIdCard = async (req, res, next) => {
         const currentField = await Field.findOne({ idCard });
         if (!currentField) return res.status(404).json({ success: false, message: 'Campo no encontrado' });
 
-        // Si es coordinador, verificar que el estudiante pertenece a su grado
         if (req.coordinatorGrade !== undefined && req.coordinatorGrade !== null) {
             if (currentField.grade !== req.coordinatorGrade) {
                 return res.status(403).json({
