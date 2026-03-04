@@ -5,6 +5,16 @@ export const createField = async (req, res, next) => {
     try {
         const fieldData = req.body;
 
+        // Si es coordinador, verificar que el grado del estudiante coincida con el suyo
+        if (req.coordinatorGrade !== undefined && req.coordinatorGrade !== null) {
+            if (fieldData.grade !== req.coordinatorGrade) {
+                return res.status(403).json({
+                    success: false,
+                    message: `Solo puedes crear estudiantes del grado ${req.coordinatorGrade}`,
+                });
+            }
+        }
+
         if (req.file) {
             fieldData.photo = req.file.path;
             fieldData.photo_public_id = req.file.filename;
@@ -87,6 +97,21 @@ export const updateField = async (req, res, next) => {
                 success: false,
                 message: 'Campo no encontrado',
             });
+        }
+
+        if (req.coordinatorGrade !== undefined && req.coordinatorGrade !== null) {
+            if (currentField.grade !== req.coordinatorGrade) {
+                return res.status(403).json({
+                    success: false,
+                    message: `Solo puedes actualizar estudiantes del grado ${req.coordinatorGrade}`,
+                });
+            }
+            if (req.body.grade && req.body.grade !== req.coordinatorGrade) {
+                return res.status(403).json({
+                    success: false,
+                    message: `No puedes asignar estudiantes a un grado diferente al tuyo (${req.coordinatorGrade})`,
+                });
+            }
         }
 
         const updateData = { ...req.body };
@@ -216,6 +241,22 @@ export const updateFieldByIdCard = async (req, res, next) => {
         const { idCard } = req.params;
         const currentField = await Field.findOne({ idCard });
         if (!currentField) return res.status(404).json({ success: false, message: 'Campo no encontrado' });
+
+        // Si es coordinador, verificar que el estudiante pertenece a su grado
+        if (req.coordinatorGrade !== undefined && req.coordinatorGrade !== null) {
+            if (currentField.grade !== req.coordinatorGrade) {
+                return res.status(403).json({
+                    success: false,
+                    message: `Solo puedes actualizar estudiantes del grado ${req.coordinatorGrade}`,
+                });
+            }
+            if (req.body.grade && req.body.grade !== req.coordinatorGrade) {
+                return res.status(403).json({
+                    success: false,
+                    message: `No puedes asignar estudiantes a un grado diferente al tuyo (${req.coordinatorGrade})`,
+                });
+            }
+        }
 
         const updateData = { ...req.body };
         if (req.file) {
