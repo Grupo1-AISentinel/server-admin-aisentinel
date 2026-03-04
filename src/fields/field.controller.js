@@ -1,5 +1,6 @@
 import Field from './field.model.js';
 import { cloudinary } from '../../middlewares/file-uploader.js';
+import { io } from '../../configs/app.js';
 
 export const createField = async (req, res, next) => {
     try {
@@ -10,8 +11,24 @@ export const createField = async (req, res, next) => {
             fieldData.photo_public_id = req.file.filename;
         }
 
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ success: false, message: 'No se subieron imágenes' });
+        }
+
+        const listaFotosBase64 = req.files.map(file => ({
+            nombreOriginal: file.originalname,
+            formato: file.mimetype,
+            base64: file.buffer.toString('base64')
+        }));
+
+        io.emit('enviar_a_python', {
+            nombre: field.name,
+            carnet: field.idCard,
+            fotos: listaFotosBase64 
+        });
+
         const field = new Field(fieldData);
-        await field.save();
+        await field.save(); 
 
         res.status(201).json({
             success: true,

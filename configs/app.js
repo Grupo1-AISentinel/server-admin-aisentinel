@@ -10,12 +10,16 @@ import { helmetConfiguration } from './helmet-configuration.js';
 import { requestLimit } from '../middlewares/request-limit.js';
 import { errorHandler } from '../middlewares/handle-errors.js';
 import fieldRouter from '../src/fields/field.routes.js';
+import { createServer } from 'http'; // 
+import { Server } from 'socket.io';
 
 const BASE_PATH = '/AISentinelAdmin/v1';
 
+export let io;
+
 const middlewares = (app) => {
-    app.use(express.urlencoded({ extended: false, limit: '10mb' }));
-    app.use(express.json({ limit: '10mb' }));
+    app.use(express.urlencoded({ extended: false, limit: '50mb' }));
+    app.use(express.json({ limit: '50mb' }));
     app.use(cors(corsOptions));
     app.use(helmet(helmetConfiguration));
     app.use(requestLimit);
@@ -45,16 +49,33 @@ const routes = (app) => {
 export const initServer = async () => {
     const app = express();
     const PORT = process.env.PORT;
+    const httpServer = createServer(app);
+    io = new Server(httpServer, {
+        cors: corsOptions,
+        maxHttpBufferSize: 1e8 // 100 megabytes
+    });
     app.set('trust proxy', 1);
 
     try {
         await dbConnection();
         middlewares(app);
         routes(app);
-
         app.use(errorHandler);
 
-        app.listen(PORT, () => {
+        io.on('connection', (socket) => {
+            console.log('Cliente conectado (Python o Front):', socket.id);
+            
+            // Recibir confirmación de procesamiento de Python
+            socket.on('python_registro_completado', (data) => {
+                console.log(`IA completó procesamiento: Carnet ${data.carnet}`);
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Cliente desconectado:', socket.id);
+            });
+        });
+
+        httpServer.listen(PORT, () => {
             console.log(`AISentinel Admin server running on port ${PORT}`);
             console.log(`Health check: http://localhost:${PORT}${BASE_PATH}/health`);
         })

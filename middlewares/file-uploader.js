@@ -26,6 +26,8 @@ const MIMETYPES = [
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; //10MB
 
+const storage = multer.memoryStorage();
+
 const createCloudinaryUploader = (folder) => {
     const storage = new CloudinaryStorage({
         cloudinary: cloudinary,
@@ -68,5 +70,19 @@ const createCloudinaryUploader = (folder) => {
 export const uploadFieldImage = createCloudinaryUploader(
     process.env.CLOUDINARY_FOLDER || 'kinal_sports/fields'
 )
+
+export const uploadFieldImages = multer({
+    storage: storage,
+    fileFilter: (req, file, cb) => {
+        if (MIMETYPES.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error(`Solo se permiten imágenes: ${MIMETYPES.join(', ')}`), false);
+        }
+    },
+    limits: {
+        fileSize: MAX_FILE_SIZE
+    }
+}).array('photos', 10);
 
 export { cloudinary };
