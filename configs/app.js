@@ -10,6 +10,7 @@ import { helmetConfiguration } from './helmet-configuration.js';
 import { requestLimit } from '../middlewares/request-limit.js';
 import { errorHandler } from '../middlewares/handle-errors.js';
 import fieldRouter from '../src/fields/field.routes.js';
+import coordinatorRouter from '../src/coordinator/coordinator.routes.js';
 
 const BASE_PATH = '/AISentinelAdmin/v1';
 
@@ -33,6 +34,7 @@ const routes = (app) => {
     })
 
     app.use(`${BASE_PATH}/fields`, fieldRouter);
+    app.use(`${BASE_PATH}/coordinators`, coordinatorRouter);
 
     app.use((req, res) => {
         res.status(404).json({
