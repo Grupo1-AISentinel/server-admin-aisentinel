@@ -8,7 +8,7 @@ export const checkValidators = (req, res, next) => {
       success: false,
       message: 'Errores de validación',
       errors: errors.array().map((err) => ({
-        field: err.path || err.param,
+        student: err.path || err.param,
         message: err.msg,
       })),
     });
