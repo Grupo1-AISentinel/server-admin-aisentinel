@@ -2,14 +2,14 @@ import { body, param } from 'express-validator';
 import { checkValidators } from './checkValidators.js';
 
 // Validaciones para crear estudiante
-export const validateCreateField = [
-    body('fieldName')
+export const validateCreateStudent = [
+    body('studentName')
         .trim()
         .notEmpty()
         .withMessage('El nombre del estudiante es requerido')
         .isLength({ max: 50 })
         .withMessage('El nombre no puede exceder 50 caracteres'),
-    body('fieldSurname')
+    body('studentSurname')
         .trim()
         .notEmpty()
         .withMessage('El apellido del estudiante es requerido')
@@ -27,23 +27,27 @@ export const validateCreateField = [
         .isIn(['1RO', '2DO', '3RO', '4TO', '5TO', '6TO'])
         .withMessage('Grado no válido'),
     body('photo')
-        .optional()
-        .isString()
-        .withMessage('La foto debe ser una cadena de texto'),
+        .exists()
+        .withMessage('Las imagenes del studiante son necesarias')
+        .isArray({ min: 3 })
+        .withMessage('Tienen que ser como minimo 3 imagenes'),
+    body('photo.*')
+        .notEmpty()
+        .withMessage('La imagen no puede estar vacía'),
     checkValidators,
 ];
 
 // Validaciones para actualizar estudiante
-export const validateUpdateFieldRequest = [
+export const validateUpdateStudent = [
     param('id')
         .isMongoId()
         .withMessage('ID debe ser un ObjectId válido de MongoDB'),
-    body('fieldName')
+    body('studentName')
         .optional()
         .trim()
         .isLength({ max: 50 })
         .withMessage('El nombre no puede exceder 50 caracteres'),
-    body('fieldSurname')
+    body('studentSurname')
         .optional()
         .trim()
         .isLength({ max: 50 })
@@ -58,35 +62,39 @@ export const validateUpdateFieldRequest = [
         .isIn(['1RO', '2DO', '3RO', '4TO', '5TO', '6TO'])
         .withMessage('Grado no válido'),
     body('photo')
-        .optional()
-        .isString()
-        .withMessage('La foto debe ser una cadena de texto'),
+        .exists()
+        .withMessage('Las imagenes del estudiante son necesarias')
+        .isArray({ min: 3 })
+        .withMessage('Tienen que ser como minimo 3 imagenes'),
+    body('photo.*')
+        .notEmpty()
+        .withMessage('La imagen no puede estar vacía'),
     checkValidators,
 ];
 
 // Validaciones para cambiar estado del estudiante
-export const validateFieldStatusChange = [
+export const validateStudentStatusChange = [
     param('id')
         .isMongoId()
         .withMessage('ID debe ser un ObjectId válido de MongoDB'),
     checkValidators,
 ];
 
-// Validaciones para eliminar campo
-export const validateDeleteField = [
+// Validaciones para eliminar estudiante
+export const validateDeleteStudent = [
     param('id')
         .isMongoId()
         .withMessage('ID debe ser un ObjectId válido de MongoDB'),
     checkValidators,
 ];
 
-// Validaciones para listar campos
-export const validateGetFields = [
+// Validaciones para listar estudiantes
+export const validateGetStudents = [
     checkValidators,
 ];
 
 // Validaciones para obtener estudiante por ID
-export const validateGetFieldById = [
+export const validateGetStudentById = [
     param('id')
         .isMongoId()
         .withMessage('ID debe ser un ObjectId válido de MongoDB'),
@@ -108,10 +116,11 @@ export const validateUpdateByIdCard = [
         .trim()
         .notEmpty().withMessage('El carnet es requerido')
         .isLength({ max: 7 }).withMessage('El carnet no puede exceder 7 caracteres'),
-    body('fieldName').optional().trim().isLength({ max: 50 }).withMessage('El nombre no puede exceder 50 caracteres'),
-    body('fieldSurname').optional().trim().isLength({ max: 50 }).withMessage('El apellido no puede exceder 50 caracteres'),
+    body('studentName').optional().trim().isLength({ max: 50 }).withMessage('El nombre no puede exceder 50 caracteres'),
+    body('studentSurname').optional().trim().isLength({ max: 50 }).withMessage('El apellido no puede exceder 50 caracteres'),
     body('idCard').optional().trim().isLength({ max: 7 }).withMessage('El carnet no puede exceder 7 caracteres'),
     body('grade').optional().isIn(['1RO', '2DO', '3RO', '4TO', '5TO', '6TO']).withMessage('Grado no válido'),
-    body('photo').optional().isString().withMessage('La foto debe ser una cadena de texto'),
+    body('photo').optional().exists().withMessage('Las imagenes del estudiante son necesarias').isArray({ min: 3 }).withMessage('Tienen que ser como minimo 3 imagenes'),
+    body('photo.*').optional().notEmpty().withMessage('La imagen no puede estar vacía'),
     checkValidators,
 ];

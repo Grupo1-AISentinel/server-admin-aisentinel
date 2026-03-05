@@ -2,15 +2,15 @@
 
 import mongoose from "mongoose";
 
-const fieldSchema = mongoose.Schema(
+const StudentSchema = mongoose.Schema(
     {
-        fieldName: {
+        studentName: {
             type: String,
             required: [true, 'El nombre del estudiante es requerido'],
             trim: true,
             maxLength: [50, 'El nombre no puede exceder 50 caracteres']
         },
-        fieldSurname: {
+        studentSurname: {
             type: String,
             required: [true, 'El apellido del estudiante es requerido'],
             trim: true,
@@ -31,14 +31,6 @@ const fieldSchema = mongoose.Schema(
                 message: 'Grado no válido'
             }
         },
-        photo: {
-            type: String,
-            default: null,
-        },
-        photo_public_id: {
-            type: String,
-            default: null,
-        },
         isActive: {
             type: Boolean,
             default: true
@@ -50,8 +42,8 @@ const fieldSchema = mongoose.Schema(
     }
 )
 
-fieldSchema.index({ isActive: 1});
-fieldSchema.index({ grade: 1});
-fieldSchema.index({ isActive: 1, grade: 1});
+StudentSchema.index({ isActive: 1});
+StudentSchema.index({ grade: 1});
+StudentSchema.index({ isActive: 1, grade: 1});
 
-export default mongoose.model('Field', fieldSchema);
+export default mongoose.model('Student', StudentSchema);
