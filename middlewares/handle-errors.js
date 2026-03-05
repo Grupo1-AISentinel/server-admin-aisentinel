@@ -6,7 +6,7 @@ export const errorHandler = (err, req, res, next) => {
     // Error de validación de Mongoose
     if (err.name === 'ValidationError') {
         const errors = Object.values(err.errors).map((error) => ({
-            field: error.path,
+            student: error.path,
             message: error.message,
         }));
 
@@ -19,11 +19,11 @@ export const errorHandler = (err, req, res, next) => {
 
     // Error de duplicado de Mongoose
     if (err.code === 11000) {
-        const field = Object.keys(err.keyValue)[0];
+        const student = Object.keys(err.keyValue)[0];
         return res.status(400).json({
             success: false,
-            message: `${field} ya existe`,
-            error: 'DUPLICATE_FIELD',
+            message: `${student   } ya existe`,
+            error: 'DUPLICATE_STUDENT',// aaaaaaaaaaaaaaaaaa
         });
     }
 
