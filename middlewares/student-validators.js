@@ -27,10 +27,12 @@ export const validateCreateStudent = [
         .isIn(['1RO', '2DO', '3RO', '4TO', '5TO', '6TO'])
         .withMessage('Grado no válido'),
     body('photo')
-        .exists()
-        .withMessage('Las imagenes del studiante son necesarias')
-        .isArray({ min: 3 })
-        .withMessage('Tienen que ser como minimo 3 imagenes'),
+        .custom((value, { req }) => {
+            if (!req.files || req.files.length < 3) {
+                throw new Error('Tienen que ser como minimo 3 imagenes');
+            }
+            return true;
+        }),
     body('photo.*')
         .notEmpty()
         .withMessage('La imagen no puede estar vacía'),

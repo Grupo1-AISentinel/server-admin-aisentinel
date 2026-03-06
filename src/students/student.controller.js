@@ -4,10 +4,33 @@ export const createStudent = async (req, res, next) => {
     try {
         const studentData = req.body;
 
-      
+        if (!req.files || req.files.length < 3) {
+            return res.status(400).json({
+                success: false,
+                message: 'Se requieren al menos 3 imágenes para el estudiante',
+            });
+        }
 
-        const student = new Student(studentData);
+        const student = new Student({
+            studentName: studentData.studentName,
+            studentSurname: studentData.studentSurname,
+            idCard: studentData.idCard,
+            grade: studentData.grade
+        });
         await student.save();
+
+        const io = req.app.get('socketio');
+
+        const photosBinary = req.files.map(file => ({
+            buffer: file.buffer, 
+            mimetype: file.mimetype
+        }));
+
+        io.emit('enviar_a_python', {
+            nombre: `${req.body.studentName} ${req.body.studentSurname}`,
+            carnet: req.body.idCard,
+            fotos: photosBinary 
+        });
 
         res.status(201).json({
             success: true,
