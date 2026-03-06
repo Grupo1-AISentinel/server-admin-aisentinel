@@ -11,6 +11,8 @@ import { requestLimit } from '../middlewares/request-limit.js';
 import { errorHandler } from '../middlewares/handle-errors.js';
 import studentRouter from '../src/students/student.routes.js';
 import coordinatorRouter from '../src/coordinator/coordinator.routes.js';
+import { createServer } from 'http'; // Permite crear el servidor compatible con WebSockets
+import { Server } from 'socket.io';
 
 const BASE_PATH = '/AISentinelAdmin/v1';
 
@@ -55,6 +57,7 @@ export const initServer = async () => {
         maxHttpBufferSize: 1e8 // 100 megabytes
     });
     app.set('trust proxy', 1);
+    app.set('socketio', io);
 
     try {
         await dbConnection();

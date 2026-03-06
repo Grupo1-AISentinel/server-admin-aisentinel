@@ -12,7 +12,7 @@ import { createStudent,
     deactivateStudentByIdCard,
     deleteStudentByIdCard
 } from './student.controller.js';
-import {  uploadStudentImage} from '../../middlewares/file-uploader.js';
+import {  uploadStudentImage } from '../../middlewares/file-uploader.js';
 import { cleanUploaderFileOnFinish, deleteFileOnError } from '../../middlewares/delete-file-on-error.js';
 import { validateCreateStudent, validateDeleteStudent, validateStudentStatusChange, validateGetStudentById, validateGetStudents, validateUpdateStudent, validateByIdCard, validateUpdateByIdCard } from '../../middlewares/student-validators.js';
 
@@ -21,7 +21,7 @@ const router = Router();
 
 router.post(
     '/create',
-  uploadStudentImage.array('photo', 3),
+     uploadStudentImage.array('photo', 10),
     cleanUploaderFileOnFinish,
     validateCreateStudent,
     createStudent

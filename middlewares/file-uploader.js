@@ -15,6 +15,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; //10MB
 
 const createUploader = () => {
     return multer({
+        storage: multer.memoryStorage(),
         fileFilter: (req, file, cb) => {
             if(MIMETYPES.includes(file.mimetype)){
                 cb(null, true);
