@@ -5,7 +5,8 @@ export const toggleInspection = async (req, res, next) => {
     try {
 
         const { grade } = req.params
-        const { role, uid } = req.user
+        const role = req.userRole
+        const uid = req.userId
 
         // si es coordinador validar grado
         if (role === 'Coordinador') {
