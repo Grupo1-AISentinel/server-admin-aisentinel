@@ -12,6 +12,7 @@ import { errorHandler } from '../middlewares/handle-errors.js';
 import studentRouter from '../src/students/student.routes.js';
 import inspectionRouter from '../src/inspection/inspection.routes.js'
 import coordinatorRouter from '../src/coordinator/coordinator.routes.js';
+import statisticsRouter from '../src/statistics/statistics.routes.js';
 import { createServer } from 'http'; // Permite crear el servidor compatible con WebSockets
 import { Server } from 'socket.io';
 
@@ -41,6 +42,7 @@ const routes = (app) => {
     app.use(`${BASE_PATH}/students`, studentRouter);
     app.use(`${BASE_PATH}/coordinators`, coordinatorRouter);
     app.use(`${BASE_PATH}/inspections`, inspectionRouter);
+    app.use(`${BASE_PATH}/statistics`, statisticsRouter);
 
     app.use((req, res) => {
         res.status(404).json({
