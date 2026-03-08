@@ -3,7 +3,11 @@ import {
     getGradesStatistics, 
     exportGradesStatistics, 
     getStudentsStatistics, 
-    exportStudentsStatistics 
+    exportStudentsStatistics,
+    getObjectsStatistics,
+    exportObjectsStatistics,
+    getDaysStatistics,
+    exportDaysStatistics
 } from './statistics.controller.js';
 import { validateJWT } from '../../middlewares/validate-JWT.js';
 import { validateAdminOrCoordinator } from '../../middlewares/validate-role.js';
@@ -24,6 +28,20 @@ router.get(
     getStudentsStatistics
 );
 
+router.get(
+    '/objects',
+    validateJWT,
+    validateAdminOrCoordinator,
+    getObjectsStatistics
+);
+
+router.get(
+    '/days',
+    validateJWT,
+    validateAdminOrCoordinator,
+    getDaysStatistics
+);
+
 router.post(
     '/grades/export', 
     validateJWT, 
@@ -36,6 +54,20 @@ router.post(
     validateJWT, 
     validateAdminOrCoordinator, 
     exportStudentsStatistics
+);
+
+router.post(
+    '/objects/export',
+    validateJWT,
+    validateAdminOrCoordinator,
+    exportObjectsStatistics
+);
+
+router.post(
+    '/days/export',
+    validateJWT,
+    validateAdminOrCoordinator,
+    exportDaysStatistics
 );
 
 export default router;
