@@ -31,6 +31,10 @@ const StudentSchema = mongoose.Schema(
                 message: 'Grado no válido'
             }
         },
+        infractions: {
+            type: Number,
+            default: 0
+        },
         isActive: {
             type: Boolean,
             default: true
