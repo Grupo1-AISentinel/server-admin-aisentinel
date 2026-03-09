@@ -1,5 +1,6 @@
 import Inspection from './inspection.model.js'
 import Coordinator from '../coordinator/coordinator.model.js'
+import axios from 'axios'
 
 export const toggleInspection = async (req, res, next) => {
     try {
@@ -40,6 +41,18 @@ export const toggleInspection = async (req, res, next) => {
         inspection.isActive = !inspection.isActive
 
         await inspection.save()
+
+        try {
+            await axios.post('http://localhost:8000/inspeccion/toggle', {
+                activar: inspection.isActive
+            });
+        } catch (error) {
+            console.error('❌ Error al notificar a Python:', error.message);
+            return res.status(500).json({
+                success: false,
+                message: 'Error al notificar a Python'
+            })
+        }
 
         return res.status(200).json({
             success: true,
