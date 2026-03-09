@@ -7,6 +7,7 @@ import morgan from 'morgan';
 import { dbConnection } from './db.js';
 import { corsOptions } from './cors-configuration.js';
 import { helmetConfiguration } from './helmet-configuration.js';
+import { swaggerSetup } from './swagger.config.js';
 import { requestLimit } from '../middlewares/request-limit.js';
 import { errorHandler } from '../middlewares/handle-errors.js';
 import { auditLogger } from '../middlewares/audit-logger.js';
@@ -34,6 +35,8 @@ const middlewares = (app) => {
 
 const routes = (app) => {
 
+    swaggerSetup(app);
+    
     app.get(`${BASE_PATH}/Health`, (request, response) => {
         response.status(200).json({
             status: 'Healthy',
