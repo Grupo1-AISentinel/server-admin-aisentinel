@@ -9,6 +9,8 @@ import { corsOptions } from './cors-configuration.js';
 import { helmetConfiguration } from './helmet-configuration.js';
 import { requestLimit } from '../middlewares/request-limit.js';
 import { errorHandler } from '../middlewares/handle-errors.js';
+import { auditLogger } from '../middlewares/audit-logger.js';
+import auditRouter from '../src/audit/audit.routes.js';
 import studentRouter from '../src/students/student.routes.js';
 import inspectionRouter from '../src/inspection/inspection.routes.js'
 import coordinatorRouter from '../src/coordinator/coordinator.routes.js';
@@ -40,11 +42,14 @@ const routes = (app) => {
         })
     })
 
+    app.use(auditLogger);
+
     app.use(`${BASE_PATH}/students`, studentRouter);
     app.use(`${BASE_PATH}/coordinators`, coordinatorRouter);
     app.use(`${BASE_PATH}/inspections`, inspectionRouter);
     app.use(`${BASE_PATH}/statistics`, statisticsRouter);
     app.use(`${BASE_PATH}/uniforms`, uniformRouter);
+    app.use(`${BASE_PATH}/audits`, auditRouter);
 
     app.use((req, res) => {
         res.status(404).json({
