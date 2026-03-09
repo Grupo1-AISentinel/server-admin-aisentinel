@@ -68,6 +68,7 @@ export const createCoordinator = async (req, res, next) => {
             authUserId,
             firstName: name,
             lastName: surname,
+            email,
             grade,
             phone: phone || null,
         });

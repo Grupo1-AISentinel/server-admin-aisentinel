@@ -26,6 +26,11 @@ export const validateCreateStudent = [
         .withMessage('El grado del estudiante es requerido')
         .isIn(['1RO', '2DO', '3RO', '4TO', '5TO', '6TO'])
         .withMessage('Grado no válido'),
+    body('email')
+        .trim()
+        .notEmpty().withMessage('El correo del estudiante es requerido')
+        .isEmail().withMessage('El correo no tiene un formato válido')
+        .isLength({ max: 150 }).withMessage('El correo no puede exceder 150 caracteres'),
     body('photo')
         .custom((value, { req }) => {
             if (!req.files || req.files.length < 3) {
@@ -63,12 +68,17 @@ export const validateUpdateStudent = [
         .optional()
         .isIn(['1RO', '2DO', '3RO', '4TO', '5TO', '6TO'])
         .withMessage('Grado no válido'),
+    body('email')
+        .optional()
+        .trim()
+        .isEmail().withMessage('El correo no tiene un formato válido')
+        .isLength({ max: 150 }).withMessage('El correo no puede exceder 150 caracteres'),
     body('photo')
-        .exists()
-        .withMessage('Las imagenes del estudiante son necesarias')
+        .optional()
         .isArray({ min: 3 })
         .withMessage('Tienen que ser como minimo 3 imagenes'),
     body('photo.*')
+        .optional()
         .notEmpty()
         .withMessage('La imagen no puede estar vacía'),
     checkValidators,
@@ -122,6 +132,7 @@ export const validateUpdateByIdCard = [
     body('studentSurname').optional().trim().isLength({ max: 50 }).withMessage('El apellido no puede exceder 50 caracteres'),
     body('idCard').optional().trim().isLength({ max: 7 }).withMessage('El carnet no puede exceder 7 caracteres'),
     body('grade').optional().isIn(['1RO', '2DO', '3RO', '4TO', '5TO', '6TO']).withMessage('Grado no válido'),
+    body('email').optional().trim().isEmail().withMessage('El correo no tiene un formato válido').isLength({ max: 150 }).withMessage('El correo no puede exceder 150 caracteres'),
     body('photo').optional().exists().withMessage('Las imagenes del estudiante son necesarias').isArray({ min: 3 }).withMessage('Tienen que ser como minimo 3 imagenes'),
     body('photo.*').optional().notEmpty().withMessage('La imagen no puede estar vacía'),
     checkValidators,
