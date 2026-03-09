@@ -2,17 +2,17 @@ import nodemailer from 'nodemailer';
 
 export const sendEmailWithAttachment = async (to, subject, text, attachmentBuffer, filename) => {
     try {
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT),
-    secure: false,
-    auth: {
-        user: process.env.SMTP_USERNAME,
-        pass: process.env.SMTP_PASSWORD,
-    },
-    logger: true,
-    debug: true
-});
+        const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: Number(process.env.SMTP_PORT),
+            secure: false,
+            auth: {
+                user: process.env.SMTP_USERNAME,
+                pass: process.env.SMTP_PASSWORD,
+            },
+            logger: true,
+            debug: true
+        });
 
         const mailOptions = {
             from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
@@ -33,5 +33,74 @@ const transporter = nodemailer.createTransport({
     } catch (error) {
         console.error("Error enviando email:", error);
         throw new Error("No se pudo enviar el correo electrónico.");
+    }
+};
+
+export const generateUniformEmail = (nombre, nivel, grado) => {
+    const baseStyles = 'font-family: Arial, sans-serif; padding: 20px; border-radius: 10px;';
+
+    if (nivel === 1) {
+        return {
+            subject: '⚠️ Primera Advertencia: Uniforme Incompleto',
+            html: `<div style="${baseStyles} border: 2px solid #ffcc00; background-color: #fff9db;">
+                    <h2 style="color: #856404;">Notificación de Uniforme</h2>
+                    <p>Estimado/a <b>${nombre}</b> de <b>${grado}</b>,</p>
+                    <p>El sistema ha detectado que no portas el uniforme completo. Esta es una <b>primera advertencia</b>.</p>
+                    <p>Por favor, cumple con el reglamento de Kinal.</p>
+                   </div>`
+        };
+    }
+    if (nivel === 2) {
+        return {
+            subject: '🚨 SEGUNDA ADVERTENCIA: Revisión de Uniforme',
+            html: `<div style="${baseStyles} border: 2px solid #e67e22; background-color: #fef5e7;">
+                    <h2 style="color: #a04000;">Segunda Advertencia</h2>
+                    <p>Estimado/a <b>${nombre}</b>,</p>
+                    <p>Se te ha detectado nuevamente sin el uniforme correcto. Esta es tu <b>segunda advertencia</b>.</p>
+                    <p>A la tercera detección, se notificará automáticamente a Coordinación.</p>
+                   </div>`
+        };
+    }
+    return {
+        subject: `🚨 REPORTE DISCIPLINARIO: ${nombre} - ${grado}`,
+        html: `<div style="${baseStyles} border: 2px solid #c0392b; background-color: #f9ebeb;">
+                <h2 style="color: #7b241c;">Reporte a Coordinación</h2>
+                <p><b>Atención Coordinador:</b></p>
+                <p>El estudiante <b>${nombre}</b> ha infringido las normas de uniforme por 3ra vez.</p>
+                <p>Se requiere seguimiento disciplinario inmediato.</p>
+               </div>`
+    };
+};
+
+export const sendSmartEmail = async (to, subject, html, image) => {
+    try {
+        const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: Number(process.env.SMTP_PORT),
+            secure: false,
+            auth: {
+                user: process.env.SMTP_USERNAME,
+                pass: process.env.SMTP_PASSWORD,
+            }
+        });
+
+        const mailOptions = {
+            from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
+            to,
+            subject,
+            html,
+            attachments: image ? [
+                {
+                    filename: 'evidencia_uniforme.jpg',
+                    content: image,
+                    encoding: 'base64'
+                }
+            ] : []
+        };
+
+        return await transporter.sendMail(mailOptions);
+    } catch (error) {
+        console.error("Error enviando email simple:", error);
+        throw new Error("No se pudo enviar la alerta de correo.");
     }
 };

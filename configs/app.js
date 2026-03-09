@@ -16,6 +16,8 @@ import statisticsRouter from '../src/statistics/statistics.routes.js';
 import uniformRouter from '../src/uniform/uniform.routes.js';
 import { createServer } from 'http'; // Permite crear el servidor compatible con WebSockets
 import { Server } from 'socket.io';
+import alertRouter from '../src/alerts/alerts.routes.js';
+import { processAutomaticDetection } from '../src/alerts/alerts.controller.js';
 
 const BASE_PATH = '/AISentinelAdmin/v1';
 
@@ -39,13 +41,19 @@ const routes = (app) => {
             service: 'AISentinel Admin Server'
         })
     })
-
+    app.use((req, res, next) => {
+        console.log(`--- NUEVA PETICIÓN ---`);
+        console.log(`Método: ${req.method}`);
+        console.log(`URL completa: ${req.originalUrl}`);
+        console.log(`Body:`, req.body);
+        next();
+    });
     app.use(`${BASE_PATH}/students`, studentRouter);
     app.use(`${BASE_PATH}/coordinators`, coordinatorRouter);
     app.use(`${BASE_PATH}/inspections`, inspectionRouter);
     app.use(`${BASE_PATH}/statistics`, statisticsRouter);
     app.use(`${BASE_PATH}/uniforms`, uniformRouter);
-
+    app.post(`${BASE_PATH}/alerts/automatic-detection`, processAutomaticDetection);
     app.use((req, res) => {
         res.status(404).json({
             success: false,
@@ -64,7 +72,7 @@ export const initServer = async () => {
     });
     app.set('trust proxy', 1);
     app.set('socketio', io);
-
+    
     try {
         await dbConnection();
         middlewares(app);
@@ -73,7 +81,7 @@ export const initServer = async () => {
 
         io.on('connection', (socket) => {
             console.log('Cliente conectado (Python o Front):', socket.id);
-            
+
             // Recibir confirmación de procesamiento de Python
             socket.on('python_registro_completado', (data) => {
                 console.log(`IA completó procesamiento: Carnet ${data.carnet}`);
