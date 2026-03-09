@@ -10,6 +10,14 @@ const coordinatorSchema = mongoose.Schema(
             unique: true,
             trim: true,
         },
+        email: {
+            type: String,
+            required: [true, 'El correo del coordinador es requerido'],
+            trim: true,
+            unique: true,
+            maxLength: [150, 'El correo no puede exceder 150 caracteres'],
+            match: [/^\S+@\S+\.\S+$/, 'El correo no tiene un formato válido']
+        },
         firstName: {
             type: String,
             required: [true, 'El nombre del coordinador es requerido'],

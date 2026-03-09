@@ -11,9 +11,18 @@ export const createStudent = async (req, res, next) => {
             });
         }
 
+        // Si es coordinador, solo puede crear estudiantes de su propio grado
+        if (req.coordinatorGrade && studentData.grade !== req.coordinatorGrade) {
+            return res.status(403).json({
+                success: false,
+                message: `Como coordinador solo puede crear estudiantes del grado ${req.coordinatorGrade}.`,
+            });
+        }
+
         const student = new Student({
             studentName: studentData.studentName,
             studentSurname: studentData.studentSurname,
+            email: studentData.email,
             idCard: studentData.idCard,
             grade: studentData.grade
         });
@@ -44,11 +53,12 @@ export const createStudent = async (req, res, next) => {
 
 export const getStudents = async (req, res, next) => {
     try {
-        const { page = 1, limit = 10, isActive = true } = req.query;
+        const { page = 1, limit = 10, isActive } = req.query;
 
         const parsedPage  = parseInt(page);
         const parsedLimit = parseInt(limit);
-        const filter = { isActive };
+        const filter = {};
+        if (isActive !== undefined) filter.isActive = isActive === 'true';
 
         const students = await Student.find(filter)
             .limit(parsedLimit)

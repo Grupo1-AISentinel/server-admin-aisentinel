@@ -1,4 +1,5 @@
 import Coordinator from '../src/coordinator/coordinator.model.js';
+import Student from '../src/students/student.model.js';
 
 export const ADMIN_ROLE = 'Administrador';
 export const COORDINATOR_ROLE = 'Coordinador';
@@ -66,6 +67,46 @@ export const validateCoordinatorGrade = async (req, res, next) => {
             success: false,
             message: 'Acceso denegado.',
         });
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+export const validateStudentGradeById = async (req, res, next) => {
+    try {
+        if (!req.coordinatorGrade) return next();
+        const student = await Student.findById(req.params.id);
+        if (!student) {
+            return res.status(404).json({ success: false, message: 'Estudiante no encontrado' });
+        }
+        if (student.grade !== req.coordinatorGrade) {
+            return res.status(403).json({
+                success: false,
+                message: `Solo puede gestionar estudiantes del grado ${req.coordinatorGrade}.`,
+            });
+        }
+        next();
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+export const validateStudentGradeByIdCard = async (req, res, next) => {
+    try {
+        if (!req.coordinatorGrade) return next();
+        const student = await Student.findOne({ idCard: req.params.idCard });
+        if (!student) {
+            return res.status(404).json({ success: false, message: 'Estudiante no encontrado' });
+        }
+        if (student.grade !== req.coordinatorGrade) {
+            return res.status(403).json({
+                success: false,
+                message: `Solo puede gestionar estudiantes del grado ${req.coordinatorGrade}.`,
+            });
+        }
+        next();
     } catch (error) {
         next(error);
     }

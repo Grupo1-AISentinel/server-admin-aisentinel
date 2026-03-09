@@ -15,42 +15,42 @@ import { createStudent,
 import {  uploadStudentImage } from '../../middlewares/file-uploader.js';
 import { cleanUploaderFileOnFinish, deleteFileOnError } from '../../middlewares/delete-file-on-error.js';
 import { validateCreateStudent, validateDeleteStudent, validateStudentStatusChange, validateGetStudentById, validateGetStudents, validateUpdateStudent, validateByIdCard, validateUpdateByIdCard } from '../../middlewares/student-validators.js';
+import { validateJWT } from '../../middlewares/validate-JWT.js';
+import { validateAdmin, validateAdminOrCoordinator, validateCoordinatorGrade, validateStudentGradeById, validateStudentGradeByIdCard } from '../../middlewares/validate-role.js';
 
 
 const router = Router();
 
+router.use(validateJWT);
+
 router.post(
     '/create',
-     uploadStudentImage.array('photo', 10),
+    validateAdminOrCoordinator,
+    validateCoordinatorGrade,
+    uploadStudentImage.array('photo', 10),
     cleanUploaderFileOnFinish,
     validateCreateStudent,
     createStudent
-); 
+);
 
 router.get(
     '/get',
+    validateAdminOrCoordinator,
     ...validateGetStudents,
     getStudents
-)
-
-router.get('/:id', ...validateGetStudentById, getStudentById);
-// Rutas PUT - Requieren autenticación
-router.put(
-    '/:id',
-    cleanUploaderFileOnFinish,
-    validateUpdateStudent,
-    updateStudent
 );
-router.put('/:id/activate', validateStudentStatusChange, activateStudent);
-router.put('/:id/deactivate', validateStudentStatusChange, deactivateStudent);
-router.delete('/:id', ...validateDeleteStudent, deleteStudent);
 
-// Rutas por carnet (idCard)
-router.get('/idcard/:idCard', ...validateByIdCard, getStudentByIdCard);
-router.put('/idcard/:idCard', uploadStudentImage.array('photo', 3), cleanUploaderFileOnFinish, ...validateUpdateByIdCard, updateStudentByIdCard);
-router.put('/idcard/:idCard/activate', ...validateByIdCard, activateStudentByIdCard);
-router.put('/idcard/:idCard/deactivate', ...validateByIdCard, deactivateStudentByIdCard);
-router.delete('/idcard/:idCard', ...validateByIdCard, deleteStudentByIdCard);
+router.get('/idcard/:idCard', validateAdminOrCoordinator, ...validateByIdCard, getStudentByIdCard);
+router.put('/idcard/:idCard', validateAdminOrCoordinator, validateCoordinatorGrade, validateStudentGradeByIdCard, uploadStudentImage.array('photo', 3), cleanUploaderFileOnFinish, ...validateUpdateByIdCard, updateStudentByIdCard);
+router.put('/idcard/:idCard/activate', validateAdminOrCoordinator, validateCoordinatorGrade, validateStudentGradeByIdCard, ...validateByIdCard, activateStudentByIdCard);
+router.put('/idcard/:idCard/deactivate', validateAdminOrCoordinator, validateCoordinatorGrade, validateStudentGradeByIdCard, ...validateByIdCard, deactivateStudentByIdCard);
+router.delete('/idcard/:idCard', validateAdmin, ...validateByIdCard, deleteStudentByIdCard);
+
+router.get('/:id', validateAdminOrCoordinator, ...validateGetStudentById, getStudentById);
+router.put('/:id', validateAdminOrCoordinator, validateCoordinatorGrade, validateStudentGradeById, uploadStudentImage.array('photo', 10), cleanUploaderFileOnFinish, validateUpdateStudent, updateStudent);
+router.put('/:id/activate', validateAdminOrCoordinator, validateCoordinatorGrade, validateStudentGradeById, validateStudentStatusChange, activateStudent);
+router.put('/:id/deactivate', validateAdminOrCoordinator, validateCoordinatorGrade, validateStudentGradeById, validateStudentStatusChange, deactivateStudent);
+router.delete('/:id', validateAdmin, ...validateDeleteStudent, deleteStudent);
 
 router.use(deleteFileOnError);
 

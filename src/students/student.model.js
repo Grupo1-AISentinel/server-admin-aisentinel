@@ -16,6 +16,14 @@ const StudentSchema = mongoose.Schema(
             trim: true,
             maxLength: [50, 'El apellido no puede exceder 50 caracteres']
         },
+        email: {
+            type: String,
+            required: [true, 'El correo del estudiante es requerido'],
+            trim: true,
+            unique: true,
+            maxLength: [150, 'El correo no puede exceder 150 caracteres'],
+            match: [/^\S+@\S+\.\S+$/, 'El correo no tiene un formato válido']
+        },
         idCard: {
             type: String,
             required: [true, 'El carnet de identidad es requerido'],
