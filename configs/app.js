@@ -7,8 +7,11 @@ import morgan from 'morgan';
 import { dbConnection } from './db.js';
 import { corsOptions } from './cors-configuration.js';
 import { helmetConfiguration } from './helmet-configuration.js';
+import { swaggerSetup } from './swagger.config.js';
 import { requestLimit } from '../middlewares/request-limit.js';
 import { errorHandler } from '../middlewares/handle-errors.js';
+import { auditLogger } from '../middlewares/audit-logger.js';
+import auditRouter from '../src/audit/audit.routes.js';
 import studentRouter from '../src/students/student.routes.js';
 import inspectionRouter from '../src/inspection/inspection.routes.js'
 import coordinatorRouter from '../src/coordinator/coordinator.routes.js';
@@ -34,6 +37,8 @@ const middlewares = (app) => {
 
 const routes = (app) => {
 
+    swaggerSetup(app);
+    
     app.get(`${BASE_PATH}/Health`, (request, response) => {
         response.status(200).json({
             status: 'Healthy',
@@ -48,12 +53,17 @@ const routes = (app) => {
         console.log(`Body:`, req.body);
         next();
     });
+
+    app.use(auditLogger);
+
     app.use(`${BASE_PATH}/students`, studentRouter);
     app.use(`${BASE_PATH}/coordinators`, coordinatorRouter);
     app.use(`${BASE_PATH}/inspections`, inspectionRouter);
     app.use(`${BASE_PATH}/statistics`, statisticsRouter);
     app.use(`${BASE_PATH}/uniforms`, uniformRouter);
     app.post(`${BASE_PATH}/alerts/automatic-detection`, processAutomaticDetection);
+    app.use(`${BASE_PATH}/audits`, auditRouter);
+
     app.use((req, res) => {
         res.status(404).json({
             success: false,
