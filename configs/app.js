@@ -38,7 +38,7 @@ const middlewares = (app) => {
 const routes = (app) => {
 
     swaggerSetup(app);
-    
+
     app.get(`${BASE_PATH}/Health`, (request, response) => {
         response.status(200).json({
             status: 'Healthy',
@@ -46,13 +46,6 @@ const routes = (app) => {
             service: 'AISentinel Admin Server'
         })
     })
-    app.use((req, res, next) => {
-        console.log(`--- NUEVA PETICIÓN ---`);
-        console.log(`Método: ${req.method}`);
-        console.log(`URL completa: ${req.originalUrl}`);
-        console.log(`Body:`, req.body);
-        next();
-    });
 
     app.use(auditLogger);
 
@@ -82,7 +75,7 @@ export const initServer = async () => {
     });
     app.set('trust proxy', 1);
     app.set('socketio', io);
-    
+
     try {
         await dbConnection();
         middlewares(app);

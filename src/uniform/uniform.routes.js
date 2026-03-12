@@ -6,7 +6,8 @@ import {
     getUniformThumbnail,
     updateUniform,
     activateUniform,
-    deactivateUniform
+    deactivateUniform,
+    autoSyncUniform
 } from './uniform.controller.js';
 import { uploadStudentImage } from '../../middlewares/file-uploader.js';
 import { cleanUploaderFileOnFinish, deleteFileOnError } from '../../middlewares/delete-file-on-error.js';
@@ -14,13 +15,15 @@ import {
     validateCreateUniform,
     validateUpdateUniform,
     validateUniformName,
-    validateGetUniforms
+    validateGetUniforms,
+    validateAutoSyncUniform
 } from '../../middlewares/uniform-validators.js';
 import { validateJWT } from '../../middlewares/validate-JWT.js';
 import { validateAdminOrCoordinator } from '../../middlewares/validate-role.js';
 
 const router = Router();
 
+router.post('/auto-sync', validateAutoSyncUniform, autoSyncUniform);
 router.get('/:name/thumbnail', validateUniformName, getUniformThumbnail);
 
 router.use(validateJWT);
@@ -28,7 +31,7 @@ router.use(validateAdminOrCoordinator);
 
 router.post(
     '/create',
-    uploadStudentImage.array('photos', 10),
+    uploadStudentImage.any(),
     cleanUploaderFileOnFinish,
     validateCreateUniform,
     createUniform
@@ -44,7 +47,7 @@ router.get('/:name', validateUniformName, getUniformByName);
 
 router.put(
     '/:name',
-    uploadStudentImage.array('photos', 10),
+    uploadStudentImage.any(),
     cleanUploaderFileOnFinish,
     validateUpdateUniform,
     updateUniform

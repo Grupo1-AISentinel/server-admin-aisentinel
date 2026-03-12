@@ -1,3 +1,4 @@
+import { ADMIN_ROLE, COORDINATOR_ROLE } from '../../middlewares/validate-role.js';
 import Coordinator from './coordinator.model.js';
 
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL;
@@ -51,7 +52,7 @@ export const createCoordinator = async (req, res, next) => {
     try {
         const { name, surname, username, email, password, phone, grade } = req.body;
 
-        // 1. Crear usuario en authservice con rol Coordinador
+        // 1. Crear usuario en authservice con rol COORDINATOR_ROLE
         const authResult = await createAuthUser({
             name,
             surname,
@@ -59,7 +60,7 @@ export const createCoordinator = async (req, res, next) => {
             email,
             password,
             phone,
-            role: 'Coordinador',
+            role: COORDINATOR_ROLE,
         });
 
         authUserId = authResult.data.id;
@@ -107,7 +108,7 @@ export const createAdmin = async (req, res, next) => {
             email,
             password,
             phone,
-            role: 'Administrador',
+            role: ADMIN_ROLE,
         });
 
         return res.status(201).json({

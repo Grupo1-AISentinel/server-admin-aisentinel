@@ -19,15 +19,13 @@ const UniformSchema = mongoose.Schema(
                 message: 'Tipo de uniforme no válido. Valores permitidos: JACKET, TSHIRT, PANTS'
             }
         },
-        thumbnail: {
-            data: {
-                type: Buffer,
-                required: [true, 'La imagen thumbnail es requerida']
-            },
-            mimetype: {
-                type: String,
-                required: [true, 'El tipo MIME de la imagen es requerido']
-            }
+        imageUrl: {
+            type: String,
+            required: [true, 'La URL de la imagen del uniforme es requerida']
+        },
+        public_id: {
+            type: String,
+            required: [true, 'El ID público de la imagen es requerido']
         },
         isActive: {
             type: Boolean,

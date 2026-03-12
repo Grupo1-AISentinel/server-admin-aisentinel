@@ -46,6 +46,17 @@ const StudentSchema = mongoose.Schema(
         isActive: {
             type: Boolean,
             default: true
+        },
+        tempEvidence: [
+            {
+                data: String,
+                reason: String,
+                timestamp: { type: Date, default: Date.now }
+            }
+        ],
+        lastInferenceAt: {
+            type: Date,
+            default: new Date(0) // Inicializado hace mucho tiempo
         }
     },
     {

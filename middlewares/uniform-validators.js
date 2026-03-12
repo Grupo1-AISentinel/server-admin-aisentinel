@@ -11,10 +11,10 @@ export const validateCreateUniform = [
     body('type')
         .notEmpty().withMessage('El tipo de uniforme es requerido')
         .isIn(VALID_TYPES).withMessage(`Tipo no válido. Valores permitidos: ${VALID_TYPES.join(', ')}`),
-    body('photos')
+    body()
         .custom((value, { req }) => {
             if (!req.files || req.files.length < 3) {
-                throw new Error('Se requieren al menos 3 imágenes');
+                throw new Error('Se requieren al menos 3 imágenes para el uniforme');
             }
             return true;
         }),
@@ -71,5 +71,34 @@ export const validateGetUniforms = [
     query('isActive')
         .optional()
         .isBoolean().withMessage('isActive debe ser true o false'),
+    checkValidators
+];
+
+const VALID_IMAGE_MIMETYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+export const validateAutoSyncUniform = [
+    body('name')
+        .trim()
+        .notEmpty().withMessage('El nombre del uniforme es requerido')
+        .isLength({ max: 80 }).withMessage('El nombre no puede exceder 80 caracteres'),
+    body('type')
+        .notEmpty().withMessage('El tipo de uniforme es requerido')
+        .isIn(VALID_TYPES).withMessage(`Tipo no válido. Valores permitidos: ${VALID_TYPES.join(', ')}`),
+    body('thumbnail')
+        .notEmpty().withMessage('El thumbnail es requerido')
+        .isObject().withMessage('El thumbnail debe ser un objeto con data y mimetype'),
+    body('thumbnail.data')
+        .notEmpty().withMessage('Los datos del thumbnail son requeridos')
+        .isString().withMessage('Los datos del thumbnail deben ser un string base64')
+        .custom((value) => {
+            const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+            if (!base64Regex.test(value)) {
+                throw new Error('Los datos del thumbnail no son un base64 válido');
+            }
+            return true;
+        }),
+    body('thumbnail.mimetype')
+        .notEmpty().withMessage('El mimetype del thumbnail es requerido')
+        .isIn(VALID_IMAGE_MIMETYPES).withMessage(`Mimetype no válido. Valores permitidos: ${VALID_IMAGE_MIMETYPES.join(', ')}`),
     checkValidators
 ];

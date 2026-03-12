@@ -36,8 +36,13 @@ export const sendEmailWithAttachment = async (to, subject, text, attachmentBuffe
     }
 };
 
-export const generateUniformEmail = (nombre, nivel, grado, reason) => {
+export const generateUniformEmail = (nombre, nivel, grado, reason, timestamp) => {
     const baseStyles = 'font-family: Arial, sans-serif; padding: 20px; border-radius: 10px;';
+    const dateFormatted = timestamp ? new Date(timestamp).toLocaleString('es-GT', { 
+        timeZone: 'America/Guatemala',
+        dateStyle: 'long', 
+        timeStyle: 'short' 
+    }) : 'Fecha no especificada';
     
     const mensajeMotivo = reason === 'ACCESORIO_NO_PERMITIDO' 
         ? 'el uso de accesorios no son permitidos ' 
@@ -45,42 +50,45 @@ export const generateUniformEmail = (nombre, nivel, grado, reason) => {
 
     const subjectMotivo = reason === 'ACCESORIO_NO_PERMITIDO' ? 'Accesorio No Permitido' : 'Uniforme Incompleto';
 
-    if (nivel === 1) {
+    const cycleCount = (nivel - 1) % 3 + 1; // 1, 2, o 3
+
+    if (cycleCount === 1) {
         return {
-            subject: `Primera Advertencia: ${subjectMotivo}`,
+            subject: `ADVERTENCIA 1/3: Notificación de Normativa - ${subjectMotivo}`,
             html: `<div style="${baseStyles} border: 2px solid #ffcc00; background-color: #fff9db;">
-                    <h2 style="color: #856404;">Notificación de Normativa</h2>
+                    <h2 style="color: #856404;">Aviso de Normativa (1ra Advertencia)</h2>
                     <p>Estimado/a <b>${nombre}</b> de <b>${grado}</b>,</p>
-                    <p>El sistema ha detectado <b>${mensajeMotivo}</b>. Esta es una <b>primera advertencia</b>.</p>
-                    <p>Por favor, cumple con el reglamento de Kinal para evitar reportes.</p>
+                    <p>El sistema ha detectado <b>${mensajeMotivo}</b> el <b>${dateFormatted}</b>.</p>
+                    <p>Esta es tu <b>primera advertencia</b> en el ciclo actual. Te faltan <b>2 advertencias</b> más para que se envíe un reporte automático a tu Coordinador de Grado.</p>
+                    <p>Por favor, cumple con el reglamento de Kinal.</p>
                    </div>`
         };
     }
-    if (nivel === 2) {
+    if (cycleCount === 2) {
         return {
-            subject: `SEGUNDA ADVERTENCIA: Revisión de ${subjectMotivo}`,
+            subject: `ADVERTENCIA 2/3: Revisión de ${subjectMotivo}`,
             html: `<div style="${baseStyles} border: 2px solid #e67e22; background-color: #fef5e7;">
-                    <h2 style="color: #a04000;">Segunda Advertencia</h2>
+                    <h2 style="color: #a04000;">Aviso Importante (2da Advertencia)</h2>
                     <p>Estimado/a <b>${nombre}</b>,</p>
-                    <p>Se te ha detectado nuevamente con <b>${mensajeMotivo}</b>. Esta es tu <b>segunda advertencia</b>.</p>
-                    <p>A la tercera detección, se notificará automáticamente a Coordinación.</p>
+                    <p>Se te ha detectado nuevamente con <b>${mensajeMotivo}</b> el <b>${dateFormatted}</b>.</p>
+                    <p>Esta es tu <b>segunda advertencia</b>. Si se detecta una infracción más, se enviará un reporte detallado con las 3 fotos de evidencia a tu Coordinador de Grado.</p>
                    </div>`
         };
     }
 
     return {
-        subject: `REPORTE DISCIPLINARIO: ${nombre} - ${grado}`,
+        subject: `REPORTE DE INFRACCIONES ACUMULADAS (3/3): ${nombre} - ${grado}`,
         html: `<div style="${baseStyles} border: 2px solid #c0392b; background-color: #f9ebeb;">
-                <h2 style="color: #7b241c;">Reporte a Coordinación</h2>
+                <h2 style="color: #7b241c;">Reporte de Infracciones - Coordinación</h2>
                 <p><b>Atención Coordinador:</b></p>
-                <p>El estudiante <b>${nombre}</b> de <b>${grado}</b> ha infringido las normas por 3ra vez.</p>
-                <p><b>Motivo detectado:</b> ${mensajeMotivo.charAt(0).toUpperCase() + mensajeMotivo.slice(1)}.</p>
-                <p>Se requiere seguimiento disciplinario inmediato.</p>
+                <p>El estudiante <b>${nombre}</b> de <b>${grado}</b> ha acumulado un ciclo de <b>3 infracciones</b> normativas.</p>
+                <p>Última detección procesada: <b>${dateFormatted}</b>.</p>
+                <p>Se adjuntan las 3 imágenes de evidencia capturadas por el sistema AI Sentinel correspondientes a este ciclo para su revisión y seguimiento disciplinario.</p>
                </div>`
     };
 };
 
-export const sendSmartEmail = async (to, subject, html, image) => {
+export const sendSmartEmail = async (to, subject, html, images = []) => {
     try {
         const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST,
@@ -92,23 +100,24 @@ export const sendSmartEmail = async (to, subject, html, image) => {
             }
         });
 
+        // Asegurar que images sea un array si se pasa un solo string
+        const imageList = Array.isArray(images) ? images : [images];
+
         const mailOptions = {
             from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
             to,
             subject,
             html,
-            attachments: image ? [
-                {
-                    filename: 'evidencia_uniforme.jpg',
-                    content: image,
-                    encoding: 'base64'
-                }
-            ] : []
+            attachments: imageList.map((img, index) => ({
+                filename: `evidencia_${index + 1}.jpg`,
+                content: img,
+                encoding: 'base64'
+            }))
         };
 
         return await transporter.sendMail(mailOptions);
     } catch (error) {
-        console.error("Error enviando email simple:", error);
+        console.error("Error enviando email smart:", error);
         throw new Error("No se pudo enviar la alerta de correo.");
     }
 };

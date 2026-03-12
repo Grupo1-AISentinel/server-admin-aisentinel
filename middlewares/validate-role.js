@@ -1,8 +1,8 @@
 import Coordinator from '../src/coordinator/coordinator.model.js';
 import Student from '../src/students/student.model.js';
 
-export const ADMIN_ROLE = 'Administrador';
-export const COORDINATOR_ROLE = 'Coordinador';
+export const ADMIN_ROLE = 'ADMIN_ROLE';
+export const COORDINATOR_ROLE = 'COORDINATOR_ROLE';
 
 /**
  * Permite solo al Administrador.

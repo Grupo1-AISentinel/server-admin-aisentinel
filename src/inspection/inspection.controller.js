@@ -1,3 +1,4 @@
+import { COORDINATOR_ROLE } from '../../middlewares/validate-role.js'
 import Inspection from './inspection.model.js'
 import Coordinator from '../coordinator/coordinator.model.js'
 import axios from 'axios'
@@ -10,7 +11,7 @@ export const toggleInspection = async (req, res, next) => {
         const uid = req.userId
 
         // si es coordinador validar grado
-        if (role === 'Coordinador') {
+        if (role === COORDINATOR_ROLE) {
 
             const coordinator = await Coordinator.findOne({ authUserId: uid })
 
