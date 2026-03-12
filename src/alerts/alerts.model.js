@@ -18,6 +18,9 @@ const alertsSchema = mongoose.Schema(
             type: Date,
             default: Date.now
         },
+        reason: { 
+            type: String, 
+            enum: ['UNIFORME_INCOMPLETO', 'ACCESORIO_NO_PERMITIDO'] },
         status: {
             type: String,
             enum: ['NOTIFICADO_ALUMNO', 'REPORTADO_A_COORDINACION'],

@@ -274,3 +274,36 @@ export const deleteStudentByIdCard = async (req, res, next) => {
         res.status(200).json({ success: true, message: 'Estudiante eliminado exitosamente' });
     } catch (error) { next(error); }
 };
+
+export const autoSyncStudents = async (req, res, next) => {
+    try {
+        const studentsList = req.body; 
+        let newlyCreated = 0;
+
+        for (const i of studentsList) {
+            const exists = await Student.findOne({ idCard: i.idCard });
+
+            if (!exists) {
+                const newStudent = new Student({
+                    studentName: i.studentName,
+                    studentSurname: i.studentSurname,
+                    idCard: i.idCard,
+                    email: i.email,
+                    grade: i.grade,
+                    isActive: true 
+                });
+                await newStudent.save();
+                newlyCreated++;
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Sincronización completada exitosamente',
+            newlyCreated: newlyCreated,
+            totalProcessed: studentsList.length
+        });
+    } catch (error) {
+        next(error);
+    }
+};

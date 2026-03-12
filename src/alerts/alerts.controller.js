@@ -5,7 +5,7 @@ import { generateUniformEmail, sendSmartEmail } from '../../utils/email-generato
 
 export const processAutomaticDetection = async (req, res) => {
     try {
-        const { idCard, has_uniform, image } = req.body;
+        const { idCard, has_uniform, has_accessory, reason, image } = req.body;
         const tiempo = 15 * 1000;
         const ahora = new Date();
 
@@ -13,15 +13,17 @@ export const processAutomaticDetection = async (req, res) => {
         const momentoActual = new Date(); 
 
         if (!idCard) {
-            console.error("❌ No se recibió idCard en el body");
-            return res.status(400).send({ message: "idCard is required" });
+            console.error("❌ No se recibió el carnet en el body");
+            return res.status(400).send({ message: "carnet is required" });
         }
 
-        if (has_uniform === true) return res.status(200).send({ message: "OK" });
+        if (has_uniform === true && !has_accessory) {
+            return res.status(200).send({ message: "OK" });
+        }
 
         const estudiante = await Student.findOne({ idCard });
         if (!estudiante) {
-            console.log(`⚠️ Estudiante con carnet ${idCard} no encontrado.`);
+            console.log(`Estudiante con carnet ${idCard} no encontrado.`);
             return res.status(404).send({ message: "Estudiante no registrado en el sistema." });
         }
 
@@ -37,7 +39,7 @@ export const processAutomaticDetection = async (req, res) => {
 
         if (alertaActiva) {
             if (alertaActiva.infractionCount >= 3) {
-                console.log(`🚫 Bloqueo: ${idCard} ya alcanzó el límite de 3 alertas HOY.`);
+                console.log(`Bloqueo: ${idCard} ya alcanzó el límite de 3 alertas HOY.`);
                 return res.status(200).send({ message: "Límite diario alcanzado." });
             }
 
@@ -48,45 +50,44 @@ export const processAutomaticDetection = async (req, res) => {
 
             alertaActiva.infractionCount += 1;
             alertaActiva.lastDetection = momentoActual;
+            alertaActiva.reason = reason; 
             await alertaActiva.save();
         } else {
             alertaActiva = new Alert({
                 studentCard: idCard,
                 infractionCount: 1,
-                lastDetection: momentoActual
+                lastDetection: momentoActual,
+                reason: reason 
             });
             await alertaActiva.save();
         }
 
         const nivel = alertaActiva.infractionCount;
-
         let destinatarios = [];
-        
-        if (estudiante.email) {
-            destinatarios.push(estudiante.email);
-        }
 
         if (nivel >= 3) {
             if (coordinador && coordinador.email) {
                 destinatarios.push(coordinador.email);
-                console.log(`📧 Reporte Nivel 3: Incluyendo a coordinador de ${estudiante.grade} (${coordinador.firstName})`);
+                console.log(`Reporte enviando a coordinador de ${estudiante.grade}`);
             } else {
                 destinatarios.push("grupo1in6bv@gmail.com"); 
-                console.log(`⚠️ No se encontró coordinador activo para ${estudiante.grade}`);
+            }
+        } else {
+            if (estudiante.email) {
+                destinatarios.push(estudiante.email);
             }
         }
-
         const { subject, html } = generateUniformEmail(
             `${estudiante.studentName} ${estudiante.studentSurname}`,
             nivel,
-            estudiante.grade
+            estudiante.grade,
+            reason
         );
-
-        await sendSmartEmail(destinatarios.join(','), subject, html, image);
-
-        console.log(`✅ Alerta Nivel ${nivel} enviada a: ${destinatarios.join(', ')}`);
+        if (destinatarios.length > 0) {
+            await sendSmartEmail(destinatarios.join(','), subject, html, image);
+            console.log(`Alerta Nivel ${nivel} procesada para: ${destinatarios.join(', ')}`);
+        }
         return res.status(200).send({ message: "Proceso completado exitosamente" });
-
     } catch (error) {
         console.error("Error en Alerts Controller:", error);
         return res.status(500).send({ message: "Error interno del servidor" });

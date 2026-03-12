@@ -1,62 +1,28 @@
 import Student from '../students/student.model.js';
+import Alert from '../alerts/alerts.model.js';
 import { generateStatsPDFBuffer } from '../../utils/pdf-generator.js';
 import { sendEmailWithAttachment } from '../../utils/email-generator.js';
 
-const objectsStatistics = [
-    { object: 'JACKET', totalInfractions: 23 },
-    { object: 'SHIRT', totalInfractions: 17 },
-    { object: 'PANT', totalInfractions: 12 },
-    { object: 'ACCESORY', totalInfractions: 9 }
-];
-
-const daysStatistics = [
-    { day: 'Lunes', totalInfractions: 21 },
-    { day: 'Martes', totalInfractions: 18 },
-    { day: 'Miércoles', totalInfractions: 26 },
-    { day: 'Jueves', totalInfractions: 17 },
-    { day: 'Viernes', totalInfractions: 24 }
-];
-
-const gradesStatistics = [
-    { grade: '1RO', totalInfractions: 21 },
-    { grade: '2DO', totalInfractions: 18 },
-    { grade: '3RO', totalInfractions: 26 },
-    { grade: '4TO', totalInfractions: 17 },
-    { grade: '5TO', totalInfractions: 24 },
-    { grade: '6TO', totalInfractions: 14 }
-];
-
-const studentsStatistics = [
-    { studentName: 'Juan', studentSurname: 'Perez', idCard: '2026001', grade: '1RO', infractions: 8 },
-    { studentName: 'Ana', studentSurname: 'Lopez', idCard: '2026002', grade: '2DO', infractions: 7 },
-    { studentName: 'Luis', studentSurname: 'Garcia', idCard: '2026003', grade: '3RO', infractions: 6 },
-    { studentName: 'Maria', studentSurname: 'Ramirez', idCard: '2026004', grade: '4TO', infractions: 5 },
-    { studentName: 'Carlos', studentSurname: 'Mendez', idCard: '2026005', grade: '5TO', infractions: 4 },
-    { studentName: 'Sofia', studentSurname: 'Hernandez', idCard: '2026006', grade: '6TO', infractions: 3 }
-];
-
-
-
 export const getGradesStatistics = async (req, res, next) => {
     try {
-        const dbStats = await Student.aggregate([
-            { $match: { infractions: { $gt: 0 } } },
+        const stats = await Alert.aggregate([
+            {
+                $lookup: {
+                    from: 'students', 
+                    localField: 'studentCard',
+                    foreignField: 'idCard',
+                    as: 'student'
+                }
+            },
+            { $unwind: '$student' },
             {
                 $group: {
-                    _id: '$grade',
-                    totalInfractions: { $sum: '$infractions' }
+                    _id: '$student.grade',
+                    totalInfractions: { $sum: '$infractionCount' }
                 }
             },
             { $sort: { totalInfractions: -1 } }
         ]);
-
-        const stats = dbStats.length > 0
-            ? dbStats
-            : gradesStatistics.map((item) => ({
-                _id: item.grade,
-                totalInfractions: item.totalInfractions
-            }));
-
         res.status(200).json({ success: true, data: stats });
     } catch (error) {
         next(error);
@@ -70,35 +36,60 @@ export const exportGradesStatistics = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'El correo de destino es requerido' });
         }
 
-        const dbStats = await Student.aggregate([
-            { $match: { infractions: { $gt: 0 } } },
-            { $group: { _id: '$grade', totalInfractions: { $sum: '$infractions' } } },
+        const dbStats = await Alert.aggregate([
+            {
+                $lookup: {
+                    from: 'students',        
+                    localField: 'studentCard',
+                    foreignField: 'idCard',
+                    as: 'studentDetail'
+                }
+            },
+            { $unwind: '$studentDetail' },   
+            {
+                $group: {
+                    _id: '$studentDetail.grade',
+                    totalInfractions: { $sum: '$infractionCount' }
+                }
+            },
             { $sort: { totalInfractions: -1 } }
         ]);
 
-        //if (stats.length === 0) {
-           // return res.status(404).json({ success: false, message: 'No hay grados con infracciones registradas para generar el reporte.' });
-        //}
-        const stats = dbStats.length > 0
-            ? dbStats
-            : gradesStatistics.map((item) => ({
-                _id: item.grade,
-                totalInfractions: item.totalInfractions
-            }));
+        if (dbStats.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'No hay alertas registradas para generar el reporte de grados.' 
+            });
+        }
 
-        // Configuración visual para la tabla de Grados
-        const headers = ['', 'Grado', 'Infracciones'];
-        const widthsCm = [1.5, 6, 3]; // Mismas proporciones adaptadas
-        const rows = stats.map((stat, index) => [
+        const headers = ['', 'Grado', 'Total Infracciones'];
+        const widthsCm = [1.5, 6, 4]; 
+        const rows = dbStats.map((stat, index) => [
             index + 1,
-            stat._id,
-            stat.totalInfractions
+            stat._id,                
+            stat.totalInfractions    
         ]);
 
-        const pdfBuffer = await generateStatsPDFBuffer('Grados con más infracciones', headers, widthsCm, rows);
-        await sendEmailWithAttachment(email, 'Reporte AISentinel - Grados', 'Adjunto encontrarás el reporte de grados con más infracciones.', pdfBuffer, 'reporte_grados.pdf');
+        const pdfBuffer = await generateStatsPDFBuffer(
+            'Reporte: Grados con más infracciones detectadas', 
+            headers, 
+            widthsCm, 
+            rows
+        );
 
-        res.status(200).json({ success: true, message: `Reporte enviado exitosamente a: ${email}` });
+        await sendEmailWithAttachment(
+            email, 
+            'Reporte AISentinel - Grados (Datos Reales)', 
+            'Adjunto encontrarás el reporte de grados basado en las detecciones de la cámara.', 
+            pdfBuffer, 
+            'reporte_grados_reales.pdf'
+        );
+
+        res.status(200).json({ 
+            success: true, 
+            message: `Reporte real enviado exitosamente a: ${email}` 
+        });
+
     } catch (error) {
         next(error);
     }
@@ -106,14 +97,43 @@ export const exportGradesStatistics = async (req, res, next) => {
 
 export const getStudentsStatistics = async (req, res, next) => {
     try {
-        const dbTopStudents = await Student.find({ isActive: true, infractions: { $gt: 0 } })
-            .sort({ infractions: -1 })
-            .limit(10)
-            .select('studentName studentSurname idCard grade infractions');
+        const topStudents = await Alert.aggregate([
+            {
+                $lookup: {
+                    from: 'students', // Colección de estudiantes en MongoDB
+                    localField: 'studentCard',
+                    foreignField: 'idCard',
+                    as: 'info'
+                }
+            },
+            { $unwind: '$info' }, 
+            {
+                $group: {
+                    _id: '$studentCard',
+                    studentName: { $first: '$info.studentName' },
+                    studentSurname: { $first: '$info.studentSurname' },
+                    idCard: { $first: '$info.idCard' },
+                    grade: { $first: '$info.grade' },
+                    infractions: { $sum: '$infractionCount' } 
+                }
+            },
+            { $sort: { infractions: -1 } }, // De mayor a menor
+            { $limit: 10 } // Solo el Top 10
+        ]);
 
-        const topStudents = dbTopStudents.length > 0 ? dbTopStudents : studentsStatistics;
+        if (topStudents.length === 0) {
+            return res.status(200).json({ 
+                success: true, 
+                message: "No hay infracciones registradas aún.",
+                data: [] 
+            });
+        }
 
-        res.status(200).json({ success: true, data: topStudents });
+        res.status(200).json({ 
+            success: true, 
+            totalResults: topStudents.length,
+            data: topStudents 
+        });
     } catch (error) {
         next(error);
     }
@@ -126,28 +146,67 @@ export const exportStudentsStatistics = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'El correo de destino es requerido' });
         }
 
-        const dbTopStudents = await Student.find({ isActive: true, infractions: { $gt: 0 } })
-            .sort({ infractions: -1 })
-            .limit(10)
-            .select('studentName studentSurname idCard grade infractions');
-
-        const topStudents = dbTopStudents.length > 0 ? dbTopStudents : studentsStatistics;
-
-        // Configuración visual exacta para la tabla de Estudiantes
-        const headers = ['', 'Alumno', 'Carnet', 'Grado', 'Infracciones'];
-        const widthsCm = [1.5, 6, 2.75, 2.5, 3];
-        const rows = topStudents.map((student, index) => [
-            index + 1,
-            `${student.studentSurname}, ${student.studentName}`,
-            student.idCard,
-            student.grade,
-            student.infractions
+        const topStudents = await Alert.aggregate([
+            {
+                $lookup: {
+                    from: 'students',
+                    localField: 'studentCard',
+                    foreignField: 'idCard',
+                    as: 'studentInfo'
+                }
+            },
+            { $unwind: '$studentInfo' },
+            {
+                $group: {
+                    _id: '$studentCard',
+                    name: { $first: '$studentInfo.studentName' },
+                    surname: { $first: '$studentInfo.studentSurname' },
+                    grade: { $first: '$studentInfo.grade' },
+                    totalInfractions: { $sum: '$infractionCount' }
+                }
+            },
+            { $sort: { totalInfractions: -1 } },
+            { $limit: 10 }
         ]);
 
-        const pdfBuffer = await generateStatsPDFBuffer('Top 10 estudiantes con más infracciones', headers, widthsCm, rows);
-        await sendEmailWithAttachment(email, 'Reporte AISentinel - Estudiantes', 'Adjunto encontrarás el reporte de los estudiantes con más infracciones.', pdfBuffer, 'reporte_estudiantes.pdf');
+        if (topStudents.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'No hay infracciones registradas para generar el reporte de estudiantes.' 
+            });
+        }
 
-        res.status(200).json({ success: true, message: `Reporte enviado exitosamente a: ${email}` });
+        const headers = ['', 'Alumno', 'Carnet', 'Grado', 'Infracciones'];
+        const widthsCm = [1.5, 6, 2.75, 2.5, 3];
+        
+        const rows = topStudents.map((student, index) => [
+            index + 1,
+            `${student.surname}, ${student.name}`, 
+            student._id,                          
+            student.grade,
+            student.totalInfractions
+        ]);
+
+        const pdfBuffer = await generateStatsPDFBuffer(
+            'Top 10 Estudiantes con más infracciones detectadas', 
+            headers, 
+            widthsCm, 
+            rows
+        );
+
+        await sendEmailWithAttachment(
+            email, 
+            'Reporte AISentinel - Ranking de Estudiantes', 
+            'Adjunto encontrarás el reporte detallado de los estudiantes con mayor índice de infracciones de uniforme.', 
+            pdfBuffer, 
+            'reporte_estudiantes_real.pdf'
+        );
+
+        res.status(200).json({ 
+            success: true, 
+            message: `Reporte de estudiantes enviado exitosamente a: ${email}` 
+        });
+
     } catch (error) {
         next(error);
     }
@@ -155,8 +214,43 @@ export const exportStudentsStatistics = async (req, res, next) => {
 
 export const getObjectsStatistics = async (req, res, next) => {
     try {
-        res.status(200).json({ success: true, data: objectsStatistics });
+        const totalUniforme = await Alert.countDocuments({ reason: 'UNIFORME_INCOMPLETO' });
+        const totalAccesorios = await Alert.countDocuments({ reason: 'ACCESORIO_NO_PERMITIDO' });
+        
+        const inicioDia = new Date();
+        inicioDia.setHours(0, 0, 0, 0);
+        
+        const hoyUniforme = await Alert.countDocuments({ 
+            reason: 'UNIFORME_INCOMPLETO', 
+            lastDetection: { $gte: inicioDia } 
+        });
+        
+        const hoyAccesorios = await Alert.countDocuments({ 
+            reason: 'ACCESORIO_NO_PERMITIDO', 
+            lastDetection: { $gte: inicioDia } 
+        });
+
+        const statistics = {
+            totals: {
+                uniformeIncompleto: totalUniforme,
+                accesoriosNoPermitidos: totalAccesorios,
+                totalAlertas: totalUniforme + totalAccesorios
+            },
+            today: {
+                uniformeIncompleto: hoyUniforme,
+                accesoriosNoPermitidos: hoyAccesorios
+            },
+            labels: ['Uniforme Incompleto', 'Accesorios'],
+            series: [totalUniforme, totalAccesorios] 
+        };
+
+        res.status(200).json({ 
+            success: true, 
+            data: statistics 
+        });
+        
     } catch (error) {
+        console.error("Error al obtener estadísticas:", error);
         next(error);
     }
 };
@@ -168,30 +262,90 @@ export const exportObjectsStatistics = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'El correo de destino es requerido' });
         }
 
-        if (objectsStatistics.length === 0) {
-            return res.status(404).json({ success: false, message: 'No hay objetos con infracciones registradas para generar el reporte.' });
+        const totalUniforme = await Alert.countDocuments({ reason: 'UNIFORME_INCOMPLETO' });
+        const totalAccesorios = await Alert.countDocuments({ reason: 'ACCESORIO_NO_PERMITIDO' });
+
+        if (totalUniforme === 0 && totalAccesorios === 0) {
+            return res.status(404).json({ success: false, message: 'No hay infracciones registradas para generar el reporte.' });
         }
 
-        const headers = ['', 'Objeto', 'Infracciones'];
-        const widthsCm = [1.5, 6, 3];
-        const rows = objectsStatistics.map((stat, index) => [
-            index + 1,
-            stat.object,
-            stat.totalInfractions
-        ]);
+        const headers = ['#', 'Tipo de Infracción', 'Total Detectado'];
+        const widthsCm = [1.5, 7, 4];
+        
+        const rows = [
+            [1, 'Uniforme Incompleto', totalUniforme],
+            [2, 'Accesorios No Permitidos', totalAccesorios]
+        ];
 
-        const pdfBuffer = await generateStatsPDFBuffer('Objetos con más incidencias', headers, widthsCm, rows);
-        await sendEmailWithAttachment(email, 'Reporte AISentinel - Objetos', 'Adjunto encontrarás el reporte de objetos con más incidencias.', pdfBuffer, 'reporte_objetos.pdf');
+        const pdfBuffer = await generateStatsPDFBuffer(
+            'Reporte de Incidencias - AISentinel', 
+            headers, 
+            widthsCm, 
+            rows
+        );
 
-        res.status(200).json({ success: true, message: `Reporte enviado exitosamente a: ${email}` });
+        await sendEmailWithAttachment(
+            email, 
+            'Reporte AISentinel - Estadísticas de Infracciones', 
+            'Adjunto encontrarás el reporte detallado de las infracciones detectadas por el sistema de visión artificial.', 
+            pdfBuffer, 
+            'reporte_incidencias_sentinel.pdf'
+        );
+
+        res.status(200).json({ 
+            success: true, 
+            message: `Reporte generado con éxito y enviado a: ${email}` 
+        });
+
     } catch (error) {
+        console.error("Error al exportar estadísticas:", error);
         next(error);
     }
 };
 
 export const getDaysStatistics = async (req, res, next) => {
     try {
-        res.status(200).json({ success: true, data: daysStatistics });
+        const stats = await Alert.aggregate([
+            {
+                $project: {
+                    dayOfWeek: { $dayOfWeek: "$lastDetection" }, 
+                    infractionCount: 1
+                }
+            },
+            {
+                $group: {
+                    _id: "$dayOfWeek",
+                    totalInfractions: { $sum: "$infractionCount" }
+                }
+            },
+            { $sort: { _id: 1 } } 
+        ]);
+
+        const days = {
+            1: 'Domingo',
+            2: 'Lunes',
+            3: 'Martes',
+            4: 'Miércoles',
+            5: 'Jueves',
+            6: 'Viernes',
+            7: 'Sábado'
+        };
+
+        // Formateamos la respuesta para que el Frontend la reciba lista para la gráfica
+        const formattedData = stats.map(item => ({
+            day: days[item._id],
+            totalInfractions: item.totalInfractions
+        }));
+
+        const fullWeek = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'].map(d => {
+            const found = formattedData.find(f => f.day === d);
+            return found || { day: d, totalInfractions: 0 };
+        });
+
+        res.status(200).json({ 
+            success: true, 
+            data: fullWeek 
+        });
     } catch (error) {
         next(error);
     }
@@ -204,22 +358,62 @@ export const exportDaysStatistics = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'El correo de destino es requerido' });
         }
 
-        if (daysStatistics.length === 0) {
-            return res.status(404).json({ success: false, message: 'No hay días con incidencias registradas para generar el reporte.' });
+        const stats = await Alert.aggregate([
+            {
+                $project: {
+                    dayOfWeek: { $dayOfWeek: "$lastDetection" },
+                    infractionCount: 1
+                }
+            },
+            {
+                $group: {
+                    _id: "$dayOfWeek",
+                    totalInfractions: { $sum: "$infractionCount" }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]);
+
+        if (stats.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'No hay alertas registradas para generar el reporte por días.' 
+            });
         }
 
-        const headers = ['', 'Día', 'Infracciones'];
-        const widthsCm = [1.5, 6, 3];
-        const rows = daysStatistics.map((stat, index) => [
+        const days = {
+            1: 'Domingo', 2: 'Lunes', 3: 'Martes', 4: 'Miércoles',
+            5: 'Jueves', 6: 'Viernes', 7: 'Sábado'
+        };
+
+        const headers = ['', 'Día de la Semana', 'Total Infracciones'];
+        const widthsCm = [1.5, 7, 4];
+        const rows = stats.map((stat, index) => [
             index + 1,
-            stat.day,
+            days[stat._id],
             stat.totalInfractions
         ]);
 
-        const pdfBuffer = await generateStatsPDFBuffer('Infracciones por día', headers, widthsCm, rows);
-        await sendEmailWithAttachment(email, 'Reporte AISentinel - Días', 'Adjunto encontrarás el reporte de infracciones por día.', pdfBuffer, 'reporte_dias.pdf');
+        const pdfBuffer = await generateStatsPDFBuffer(
+            'Reporte de Infracciones: Distribución por Día', 
+            headers, 
+            widthsCm, 
+            rows
+        );
 
-        res.status(200).json({ success: true, message: `Reporte enviado exitosamente a: ${email}` });
+        await sendEmailWithAttachment(
+            email, 
+            'Reporte AISentinel - Análisis Semanal', 
+            'Se adjunta el análisis de infracciones detectadas distribuido por día de la semana.', 
+            pdfBuffer, 
+            'reporte_analisis_dias.pdf'
+        );
+
+        res.status(200).json({ 
+            success: true, 
+            message: `Reporte de días enviado exitosamente a: ${email}` 
+        });
+
     } catch (error) {
         next(error);
     }
