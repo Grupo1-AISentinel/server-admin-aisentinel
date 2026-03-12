@@ -10,6 +10,7 @@ import { createStudent,
     updateStudentByIdCard,
     activateStudentByIdCard,
     deactivateStudentByIdCard,
+    autoSyncStudents,
     deleteStudentByIdCard
 } from './student.controller.js';
 import {  uploadStudentImage } from '../../middlewares/file-uploader.js';
@@ -20,6 +21,7 @@ import { validateAdmin, validateAdminOrCoordinator, validateCoordinatorGrade, va
 
 
 const router = Router();
+router.post('/auto-sync', autoSyncStudents);
 
 router.use(validateJWT);
 
