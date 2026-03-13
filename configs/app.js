@@ -21,6 +21,7 @@ import { createServer } from 'http'; // Permite crear el servidor compatible con
 import { Server } from 'socket.io';
 import alertRouter from '../src/alerts/alerts.routes.js';
 import { processAutomaticDetection } from '../src/alerts/alerts.controller.js';
+import asistenciaRouter from '../src/asistencia/asistencia.routes.js';
 
 const BASE_PATH = '/AISentinelAdmin/v1';
 
@@ -56,7 +57,8 @@ const routes = (app) => {
     app.use(`${BASE_PATH}/uniforms`, uniformRouter);
     app.post(`${BASE_PATH}/alerts/automatic-detection`, processAutomaticDetection);
     app.use(`${BASE_PATH}/audits`, auditRouter);
-
+    app.use(`${BASE_PATH}/attendance`, asistenciaRouter);
+    
     app.use((req, res) => {
         res.status(404).json({
             success: false,
