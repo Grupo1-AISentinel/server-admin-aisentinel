@@ -1,79 +1,36 @@
 import Uniform from './uniform.model.js';
 import cloudinary from '../../configs/cloudinary.js';
-
 const pickBestImage = (files) =>
     files.reduce((best, current) =>
         current.size > best.size ? current : best
     );
 
-export const createUniform = async (req, res, next) => {
+export const createUniform = async (req, res) => {
     try {
-        const { name, type } = req.body;
 
-        if (!req.files || req.files.length < 3) {
-            return res.status(400).json({
-                success: false,
-                message: 'Se requieren al menos 3 imágenes para el uniforme',
-            });
+        const uniformData = req.body;
+
+        if (req.file) {
+            uniformData.photo = req.file.path;
         }
 
-        const existing = await Uniform.findOne({ name });
-        if (existing) {
-            return res.status(409).json({
-                success: false,
-                message: 'Ya existe un uniforme con ese nombre',
-            });
-        }
-
-        // Subir una imagen cualquiera como thumbnail inicial (luego Python lo actualizará con el recorte YOLO)
-        const firstImage = req.files[0];
-        
-        // Convertir buffer a base64 para Cloudinary
-        const base64Image = Buffer.from(firstImage.buffer).toString('base64');
-        const dataUri = `data:${firstImage.mimetype};base64,${base64Image}`;
-
-        const uploadResult = await cloudinary.uploader.upload(dataUri, {
-            folder: 'AISentinel/uniforms',
-            public_id: `${name.replace(/\s+/g, '_')}_initial`,
-            overwrite: true,
-            resource_type: 'image'
-        });
-
-        const uniform = new Uniform({
-            name,
-            type,
-            imageUrl: uploadResult.secure_url,
-            public_id: uploadResult.public_id
-        });
-
+        const uniform = new Uniform(uniformData);
         await uniform.save();
-
-        const io = req.app.get('socketio');
-        io.emit('enviar_uniforme_a_python', {
-            nombre: name,
-            tipo: type,
-            fotos: req.files.map(file => ({
-                buffer: file.buffer,
-                mimetype: file.mimetype
-            }))
-        });
 
         res.status(201).json({
             success: true,
-            message: 'Uniforme creado exitosamente. Python generará el recorte YOLO.',
-            data: {
-                _id: uniform._id,
-                name: uniform.name,
-                type: uniform.type,
-                isActive: uniform.isActive,
-                createdAt: uniform.createdAt,
-                imageUrl: uniform.imageUrl
-            }
-        });
+            message: 'Uniforme creado exitosamente',
+            data: uniform
+        })
+
     } catch (error) {
-        next(error);
+        res.status(400).json({
+            success: false,
+            message: 'Error al crear el uniforme',
+            error: error.message
+        })
     }
-};
+}
 
 export const getUniforms = async (req, res, next) => {
     try {
@@ -258,69 +215,29 @@ export const deactivateUniform = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
-export const autoSyncUniform = async (req, res, next) => {
+export const seederUniforms = async (req, res, next) => {
     try {
-        const { name, type, thumbnail } = req.body;
 
-        // Subir el recorte YOLO desde Python a Cloudinary
-        const dataUri = `data:${thumbnail.mimetype};base64,${thumbnail.data}`;
+        const uniformData = req.body;
 
-        const uploadResult = await cloudinary.uploader.upload(dataUri, {
-            folder: 'AISentinel/uniforms',
-            public_id: name.replace(/\s+/g, '_'), // El recorte YOLO final no lleva el sufijo '_initial'
-            overwrite: true,
-            resource_type: 'image'
-        });
-
-        const thumbnailData = {
-            imageUrl: uploadResult.secure_url,
-            public_id: uploadResult.public_id
-        };
-
-        const existing = await Uniform.findOne({ name });
-
-        if (existing) {
-            const updated = await Uniform.findOneAndUpdate(
-                { name },
-                { type, ...thumbnailData },
-                { new: true, runValidators: true }
-            );
-
-            return res.status(200).json({
-                success: true,
-                message: 'Uniforme actualizado con recorte YOLO sincronizado',
-                data: {
-                    _id: updated._id,
-                    name: updated.name,
-                    type: updated.type,
-                    isActive: updated.isActive,
-                    updatedAt: updated.updatedAt,
-                    imageUrl: updated.imageUrl
-                }
-            });
+        if (req.file) {
+            uniformData.photo = req.file.path;
         }
 
-        const uniform = new Uniform({
-            name,
-            type,
-            ...thumbnailData
-        });
-
+        const uniform = new Uniform(uniformData);
         await uniform.save();
 
         res.status(201).json({
             success: true,
-            message: 'Uniforme creado con recorte YOLO sincronizado',
-            data: {
-                _id: uniform._id,
-                name: uniform.name,
-                type: uniform.type,
-                isActive: uniform.isActive,
-                createdAt: uniform.createdAt,
-                imageUrl: uniform.imageUrl
-            }
-        });
+            message: 'Uniforme creado exitosamente',
+            data: uniform
+        })
+
     } catch (error) {
-        next(error);
+        res.status(400).json({
+            success: false,
+            message: 'Error al crear el uniforme',
+            error: error.message
+        })
     }
 };

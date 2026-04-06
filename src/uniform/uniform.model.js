@@ -19,13 +19,9 @@ const UniformSchema = mongoose.Schema(
                 message: 'Tipo de uniforme no válido. Valores permitidos: JACKET, TSHIRT, PANTS'
             }
         },
-        imageUrl: {
+        photo: {
             type: String,
-            required: [true, 'La URL de la imagen del uniforme es requerida']
-        },
-        public_id: {
-            type: String,
-            required: [true, 'El ID público de la imagen es requerido']
+            required: [true, 'La foto del uniforme es requerida']
         },
         isActive: {
             type: Boolean,

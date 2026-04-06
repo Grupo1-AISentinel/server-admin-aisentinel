@@ -102,3 +102,20 @@ export const validateAutoSyncUniform = [
         .isIn(VALID_IMAGE_MIMETYPES).withMessage(`Mimetype no válido. Valores permitidos: ${VALID_IMAGE_MIMETYPES.join(', ')}`),
     checkValidators
 ];
+
+
+export const validateExistingUniform = async (req, res, next) => {
+    try {
+        const { name } = req.body;
+        const existing = await Uniform.findOne({ name });
+        if (existing) {
+            return res.status(400).json({
+                success: false,
+                message: 'Uniforme ya existe'
+            });
+        }
+        next();
+    } catch (error) {
+        next(error);
+    }
+}

@@ -1,28 +1,28 @@
-import Attendance from '../asistencia/asistencia.model.js';
+import Attendance from '../attendances/attendance.model.js';
 import Student from '../students/student.model.js';
 
 export const processAutomaticAttendance = async (req, res) => {
     try {
-        const { idCard } = req.body; 
+        const { idCard } = req.body;
         const ahora = new Date();
         const fechaHoy = ahora.toISOString().split('T')[0];
 
         const estudiante = await Student.findOne({ idCard });
-        
+
         if (!estudiante) {
             console.log(`Intento de acceso con carnet no registrado: ${idCard}`);
             return res.status(404).json({ message: "Estudiante no encontrado" });
         }
 
-        const yaMarco = await Attendance.findOne({ 
-            studentCard: idCard, 
-            dateStr: fechaHoy 
+        const yaMarco = await Attendance.findOne({
+            studentCard: idCard,
+            dateStr: fechaHoy
         });
 
         if (yaMarco) {
-            return res.status(200).json({ 
+            return res.status(200).json({
                 message: "Asistencia ya registrada anteriormente",
-                student: estudiante.studentName 
+                student: estudiante.studentName
             });
         }
 
@@ -36,9 +36,9 @@ export const processAutomaticAttendance = async (req, res) => {
         await nuevaAsistencia.save();
 
         console.log(`ASISTENCIA REGISTRADA: ${estudiante.studentName} (${estudiante.grade})`);
-        
-        return res.status(201).json({ 
-            success: true, 
+
+        return res.status(201).json({
+            success: true,
             message: `Bienvenido, ${estudiante.studentName}`,
             time: ahora.toLocaleTimeString()
         });
@@ -54,8 +54,8 @@ export const getDailyAttendance = async (req, res) => {
         const hoy = new Date().toISOString().split('T')[0];
 
         const asistencias = await Attendance.find({ dateStr: hoy })
-            .populate('student', 'studentName studentSurname grade') 
-            .sort({ checkIn: -1 }); 
+            .populate('student', 'studentName studentSurname grade')
+            .sort({ checkIn: -1 });
 
         return res.status(200).json({
             success: true,
