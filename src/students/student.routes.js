@@ -1,19 +1,6 @@
 import { Router } from 'express';
-import { createStudent, 
-    getStudents,
-    getStudentById,
-    updateStudent,
-    activateStudent,
-    deactivateStudent,
-    deleteStudent,
-    getStudentByIdCard,
-    updateStudentByIdCard,
-    activateStudentByIdCard,
-    deactivateStudentByIdCard,
-    autoSyncStudents,
-    deleteStudentByIdCard
-} from './student.controller.js';
-import {  uploadStudentImage } from '../../middlewares/file-uploader.js';
+import { createStudent, getStudents, getStudentById, updateStudent, activateStudent, deactivateStudent, deleteStudent, getStudentByIdCard, updateStudentByIdCard, activateStudentByIdCard, deactivateStudentByIdCard, autoSyncStudents, deleteStudentByIdCard } from './student.controller.js';
+import { uploadStudentImage } from '../../middlewares/file-uploader.js';
 import { cleanUploaderFileOnFinish, deleteFileOnError } from '../../middlewares/delete-file-on-error.js';
 import { validateCreateStudent, validateDeleteStudent, validateStudentStatusChange, validateGetStudentById, validateGetStudents, validateUpdateStudent, validateByIdCard, validateUpdateByIdCard } from '../../middlewares/student-validators.js';
 import { validateJWT } from '../../middlewares/validate-JWT.js';
@@ -51,7 +38,7 @@ router.delete('/idcard/:idCard', validateAdmin, ...validateByIdCard, deleteStude
 router.get('/:id', validateAdminOrCoordinator, ...validateGetStudentById, getStudentById);
 router.put('/:id', validateAdminOrCoordinator, validateCoordinatorGrade, validateStudentGradeById, uploadStudentImage.array('photo', 10), cleanUploaderFileOnFinish, validateUpdateStudent, updateStudent);
 router.put('/:id/activate', validateAdminOrCoordinator, validateCoordinatorGrade, validateStudentGradeById, validateStudentStatusChange, activateStudent);
-router.put('/:id/deactivate', validateAdminOrCoordinator, validateCoordinatorGrade, validateStudentGradeById, validateStudentStatusChange, deactivateStudent);
+router.put('/:id/desactivate', validateAdminOrCoordinator, validateCoordinatorGrade, validateStudentGradeById, validateStudentStatusChange, deactivateStudent);
 router.delete('/:id', validateAdmin, ...validateDeleteStudent, deleteStudent);
 
 router.use(deleteFileOnError);
