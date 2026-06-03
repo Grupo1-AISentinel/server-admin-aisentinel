@@ -11,13 +11,6 @@ export const validateCreateUniform = [
     body('type')
         .notEmpty().withMessage('El tipo de uniforme es requerido')
         .isIn(VALID_TYPES).withMessage(`Tipo no válido. Valores permitidos: ${VALID_TYPES.join(', ')}`),
-    body()
-        .custom((value, { req }) => {
-            if (!req.files || req.files.length < 3) {
-                throw new Error('Se requieren al menos 3 imágenes para el uniforme');
-            }
-            return true;
-        }),
     checkValidators
 ];
 
@@ -38,11 +31,7 @@ export const validateUpdateUniform = [
         .custom((value, { req }) => {
             const hasName = req.body.name && req.body.name.trim() !== '';
             const hasType = req.body.type && req.body.type.trim() !== '';
-            const hasPhotos = req.files && req.files.length >= 3;
 
-            if (!hasPhotos) {
-                throw new Error('Se requieren al menos 3 imágenes para actualizar el uniforme');
-            }
             if (!hasName && !hasType) {
                 throw new Error('Debes enviar al menos name o type junto con las imágenes');
             }

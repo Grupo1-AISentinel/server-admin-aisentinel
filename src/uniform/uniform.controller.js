@@ -8,10 +8,18 @@ const pickBestImage = (files) =>
 export const createUniform = async (req, res) => {
     try {
 
+<<<<<<< Updated upstream
         const uniformData = req.body;
 
         if (req.file) {
             uniformData.photo = req.file.path;
+=======
+        if (!req.files || req.files.length < 1) {
+            return res.status(400).json({
+                success: false,
+                message: 'Se requiere al menos 1 imagen para el uniforme',
+            });
+>>>>>>> Stashed changes
         }
 
         const uniform = new Uniform(uniformData);
@@ -125,10 +133,10 @@ export const updateUniform = async (req, res, next) => {
             });
         }
 
-        if (!req.files || req.files.length < 3) {
+        if (!req.files || req.files.length < 1) {
             return res.status(400).json({
                 success: false,
-                message: 'Se requieren al menos 3 imágenes para actualizar el uniforme'
+                message: 'Se requiere al menos 1 imagen para actualizar el uniforme'
             });
         }
 

@@ -44,8 +44,15 @@ export const toggleInspection = async (req, res, next) => {
         await inspection.save()
 
         try {
-            await axios.post('http://localhost:8000/inspeccion/toggle', {
+            const pythonUrl = process.env.PYTHON_SERVER_URL || 'http://localhost:8000';
+            const internalApiKey = process.env.INTERNAL_API_KEY;
+            
+            await axios.post(`${pythonUrl}/inspeccion/toggle`, {
                 activar: inspection.isActive
+            }, {
+                headers: {
+                    'x-internal-api-key': internalApiKey
+                }
             });
         } catch (error) {
             console.error('❌ Error al notificar a Python:', error.message);
