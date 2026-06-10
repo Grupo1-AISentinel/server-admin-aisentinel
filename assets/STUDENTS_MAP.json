@@ -1,0 +1,11 @@
+{
+  "_comment": "Mapa canonico de los 6 estudiantes de demo. Usado por el auto-seeder del admin (helpers/seed-assets.js) para mapear carpeta de assets -> (carnet, nombre). Mismo mapa vive en server-pyimage-aisentinel/server/scripts/STUDENTS_MAP.json (para el auto-sync Mongo del pyimage).",
+  "students": [
+    { "folder": "asiliezar", "idCard": "2024342", "studentName": "Angel",  "studentSurname": "Siliezar" },
+    { "folder": "itiguila",  "idCard": "2024295", "studentName": "Isaac",  "studentSurname": "Tiguila" },
+    { "folder": "jyaxon",    "idCard": "2024442", "studentName": "Jeferson", "studentSurname": "Yaxon" },
+    { "folder": "asosa",     "idCard": "2024449", "studentName": "Anderson", "studentSurname": "Sosa" },
+    { "folder": "wflorian",  "idCard": "2024392", "studentName": "Wilson", "studentSurname": "Florian" },
+    { "folder": "alucero",   "idCard": "2021211", "studentName": "Angel",  "studentSurname": "Lucero" }
+  ]
+}
