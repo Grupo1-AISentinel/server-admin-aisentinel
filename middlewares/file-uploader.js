@@ -62,4 +62,8 @@ export const uploadUniformImage = createCloudinaryUploader(
     process.env.CLOUDINARY_FOLDER_UNIFORMS || 'AISentinel/uniforms'
 )
 
+export const uploadStudentImage = createCloudinaryUploader(
+    process.env.CLOUDINARY_FOLDER_STUDENTS || 'AISentinel/students'
+)
+
 export { cloudinary }

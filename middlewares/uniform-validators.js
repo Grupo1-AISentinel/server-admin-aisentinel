@@ -1,5 +1,6 @@
 import { body, param, query } from 'express-validator';
 import { checkValidators } from './checkValidators.js';
+import Uniform from '../src/uniform/uniform.model.js';
 
 const VALID_TYPES = ['JACKET', 'TSHIRT', 'PANTS'];
 
@@ -11,6 +12,18 @@ export const validateCreateUniform = [
     body('type')
         .notEmpty().withMessage('El tipo de uniforme es requerido')
         .isIn(VALID_TYPES).withMessage(`Tipo no válido. Valores permitidos: ${VALID_TYPES.join(', ')}`),
+    body()
+        .custom((value, { req }) => {
+            const files = req.files || [];
+            if (files.length < 3) {
+                throw new Error(`Se requieren al menos 3 imagenes para generar el embedding (recibidas: ${files.length})`);
+            }
+            const invalid = files.find((f) => !VALID_IMAGE_MIMETYPES.includes(f.mimetype));
+            if (invalid) {
+                throw new Error(`Mimetype no valido: ${invalid.mimetype}. Permitidos: ${VALID_IMAGE_MIMETYPES.join(', ')}`);
+            }
+            return true;
+        }),
     checkValidators
 ];
 
