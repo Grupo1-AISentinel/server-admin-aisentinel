@@ -1,3 +1,16 @@
 node_modules
 .env
 admin-aisentinel.env
+admin.env
+auth.env
+client.env
+py.env
+
+# Runtime uploads (modelos 3D, videos de camaras, fotos de registro)
+uploads/
+
+# Logs
+logs/
+*.err.log
+*.out.log
+*.log
