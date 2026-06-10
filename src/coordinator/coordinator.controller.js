@@ -49,10 +49,13 @@ const deleteAuthUser = async (authUserId) => {
 
 export const createCoordinator = async (req, res, next) => {
     let authUserId = null;
+    let weCreatedAuthUser = false;
     try {
         const { name, surname, username, email, password, phone, grade } = req.body;
 
-        // 1. Crear usuario en authservice con rol COORDINATOR_ROLE
+        // 1. Intentar crear usuario en authservice con rol COORDINATOR_ROLE.
+        // Si el email/username ya existe, auth devuelve 409 y debemos ABORTAR
+        // (no rollback, porque no creamos nada nuestro que revertir).
         const authResult = await createAuthUser({
             name,
             surname,
@@ -63,6 +66,7 @@ export const createCoordinator = async (req, res, next) => {
             role: COORDINATOR_ROLE,
         });
 
+        weCreatedAuthUser = true;
         authUserId = authResult.data.id;
 
         const coordinator = new Coordinator({
@@ -85,12 +89,21 @@ export const createCoordinator = async (req, res, next) => {
             },
         });
     } catch (error) {
-        if (authUserId) {
+        // Solo hacer rollback del usuario auth si lo creamos nosotros en
+        // este request. Si ya existia (error 409), no nos pertenece.
+        if (weCreatedAuthUser && authUserId) {
             try {
                 await deleteAuthUser(authUserId);
             } catch (rollbackError) {
                 console.error('Error al revertir usuario en authservice:', rollbackError.message);
             }
+        }
+        // Si el error es 409 (email duplicado), responder BadRequest claro
+        if (error.statusCode === 409) {
+            return res.status(409).json({
+                success: false,
+                message: 'Ya existe un usuario con ese email o nombre de usuario',
+            });
         }
         next(error);
     }
@@ -172,6 +185,38 @@ export const getCoordinatorById = async (req, res, next) => {
         return res.status(200).json({
             success: true,
             data: coordinator,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Devuelve el perfil de coordinador del usuario autenticado.
+// ADMIN_ROLE: retorna { isAdmin: true, coordinator: null } para que el cliente
+// sepa que no hay restricción de grado. COORDINATOR_ROLE: busca el doc Coordinator
+// por authUserId; si no existe (p.ej. usuario recién creado), 404 con mensaje
+// claro para que el cliente limpie coordinatorGrade.
+export const getMyCoordinatorProfile = async (req, res, next) => {
+    try {
+        if (req.userRole === ADMIN_ROLE) {
+            return res.status(200).json({
+                success: true,
+                data: { isAdmin: true, coordinator: null },
+            });
+        }
+
+        const coordinator = await Coordinator.findOne({ authUserId: req.userId });
+
+        if (!coordinator) {
+            return res.status(404).json({
+                success: false,
+                message: 'Este usuario no tiene perfil de coordinador',
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: { isAdmin: false, coordinator },
         });
     } catch (error) {
         next(error);

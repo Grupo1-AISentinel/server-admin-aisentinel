@@ -8,37 +8,56 @@ const pickBestImage = (files) =>
 export const createUniform = async (req, res) => {
     try {
 
-<<<<<<< Updated upstream
-        const uniformData = req.body;
-
-        if (req.file) {
-            uniformData.photo = req.file.path;
-=======
-        if (!req.files || req.files.length < 1) {
+        if (!req.files || req.files.length < 3) {
             return res.status(400).json({
                 success: false,
-                message: 'Se requiere al menos 1 imagen para el uniforme',
+                message: 'Se requieren al menos 3 imagenes para generar el embedding del uniforme',
             });
->>>>>>> Stashed changes
         }
 
+        const firstImage = req.files[0];
+        const base64Image = Buffer.from(firstImage.buffer).toString('base64');
+        const dataUri = `data:${firstImage.mimetype};base64,${base64Image}`;
+
+        const uploadResult = await cloudinary.uploader.upload(dataUri, {
+            folder: 'AISentinel/uniforms',
+            public_id: `${req.body.name.replace(/\s+/g, '_')}_initial`,
+            overwrite: true,
+            resource_type: 'image'
+        });
+
+        const uniformData = {
+            ...req.body,
+            imageUrl: uploadResult.secure_url,
+            public_id: uploadResult.public_id,
+        };
         const uniform = new Uniform(uniformData);
         await uniform.save();
 
+        const io = req.app.get('socketio');
+        io.emit('enviar_uniforme_a_python', {
+            nombre: req.body.name,
+            tipo: req.body.type,
+            fotos: req.files.map((file) => ({
+                buffer: file.buffer,
+                mimetype: file.mimetype,
+            })),
+        });
+
         res.status(201).json({
             success: true,
-            message: 'Uniforme creado exitosamente',
-            data: uniform
-        })
+            message: 'Uniforme creado exitosamente. Python generara el embedding.',
+            data: uniform,
+        });
 
     } catch (error) {
         res.status(400).json({
             success: false,
             message: 'Error al crear el uniforme',
-            error: error.message
-        })
+            error: error.message,
+        });
     }
-}
+};
 
 export const getUniforms = async (req, res, next) => {
     try {
@@ -247,5 +266,84 @@ export const seederUniforms = async (req, res, next) => {
             message: 'Error al crear el uniforme',
             error: error.message
         })
+    }
+};
+
+/**
+ * Crea multiples uniformes de una sola vez (usado por helpers/seed-assets.js).
+ * Body (JSON): { uniforms: [{ name, type, imagePaths: [absPath1, ...], estado?, marca? }] }
+ * Auth: x-internal-token (no JWT, no rol).
+ *
+ * Por cada uniforme: crea en Mongo (Uniform) con la primera imagen como
+ * photo principal. Skip silencioso si el name ya existe.
+ *
+ * NOTA: el embedding en ChromaDB de pyimage se genera via el flujo normal
+ * (UI /uniforms/create + socket hacia el cliente). El seeder automatico
+ * solo garantiza que el catalogo este en Mongo, sincronizado con los
+ * assets. El embedding se materializa cuando el usuario usa la UI para
+ * ver/recrear el uniforme (boton "recalcular embedding" en el panel).
+ */
+export const createUniformsBulk = async (req, res, next) => {
+    try {
+        const fs = await import('fs');
+        const { default: pyimageClient } = await import('../../utils/pyimage-client.js');
+        const uniforms = Array.isArray(req.body?.uniforms) ? req.body.uniforms : [];
+        const results = { created: 0, skipped: 0, embeddings: 0, failed: 0, errors: [] };
+
+        for (const u of uniforms) {
+            try {
+                if (!u.name || !u.type) {
+                    results.failed += 1;
+                    results.errors.push({ name: u.name, error: 'name y type son requeridos' });
+                    continue;
+                }
+                const imagePaths = Array.isArray(u.imagePaths) ? u.imagePaths : [];
+                if (imagePaths.length < 1) {
+                    results.failed += 1;
+                    results.errors.push({ name: u.name, error: 'se requiere al menos 1 imagen' });
+                    continue;
+                }
+                if (!fs.existsSync(imagePaths[0])) {
+                    results.failed += 1;
+                    results.errors.push({ name: u.name, error: `imagen no existe: ${imagePaths[0]}` });
+                    continue;
+                }
+
+                let uniform = await Uniform.findOne({ name: u.name });
+                if (!uniform) {
+                    uniform = await Uniform.create({
+                        name: u.name,
+                        type: (u.type || '').toUpperCase(),
+                        photo: imagePaths[0],
+                        imageUrl: null,
+                        public_id: null,
+                        isActive: true,
+                    });
+                    results.created += 1;
+                } else {
+                    results.skipped += 1;
+                }
+
+                // Generar embeddings en ChromaDB (pyimage). Si ya existian, el
+                // upsert los actualiza con los mismos id (no duplica).
+                try {
+                    const r = await pyimageClient.registerUniform({
+                        itemId: u.name,
+                        itemType: (u.type || '').toUpperCase(),
+                        imagePaths,
+                    });
+                    if (r && !r.error) results.embeddings += 1;
+                } catch (pyErr) {
+                    console.warn(`[uniforms-bulk] pyimage fallo para ${u.name}: ${pyErr.message}`);
+                }
+            } catch (e) {
+                results.failed += 1;
+                results.errors.push({ name: u.name, error: e.message });
+            }
+        }
+
+        res.status(200).json({ success: true, ...results });
+    } catch (error) {
+        next(error);
     }
 };

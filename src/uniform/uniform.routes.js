@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { validateCreateUniform, validateUpdateUniform, validateUniformName, validateGetUniforms, validateAutoSyncUniform, validateExistingUniform } from '../../middlewares/uniform-validators.js';
-import { createUniform, getUniforms, getUniformByName, getUniformThumbnail, updateUniform, activateUniform, deactivateUniform, seederUniforms } from './uniform.controller.js';
+import { createUniform, getUniforms, getUniformByName, getUniformThumbnail, updateUniform, activateUniform, deactivateUniform, seederUniforms, createUniformsBulk } from './uniform.controller.js';
 
 import { uploadUniformImage } from '../../middlewares/file-uploader.js';
 import { cleanUploaderFileOnFinish, deleteFileOnError } from '../../middlewares/delete-file-on-error.js';
 
 import { validateJWT } from '../../middlewares/validate-JWT.js';
 import { validateAdminOrCoordinator } from '../../middlewares/validate-role.js';
+import { validateInternalToken } from '../../middlewares/validate-internal-token.js';
 
 const router = Router();
 // Esto se llama desde el seeder de python
@@ -16,6 +17,8 @@ router.post('/seeder-uniforms',
     validateExistingUniform,
     validateAutoSyncUniform,
     seederUniforms);
+// Esto se llama desde el auto-seeder de assets del admin (helpers/seed-assets.js)
+router.post('/create-bulk', validateInternalToken, createUniformsBulk);
 router.get('/:name/thumbnail', validateUniformName, getUniformThumbnail);
 
 router.use(validateJWT);
@@ -23,7 +26,7 @@ router.use(validateAdminOrCoordinator);
 
 router.post(
     '/create',
-    uploadUniformImage.single('image'),
+    uploadUniformImage.any(),
     cleanUploaderFileOnFinish,
     validateCreateUniform,
     createUniform
@@ -39,7 +42,7 @@ router.get('/:name', validateUniformName, getUniformByName);
 
 router.put(
     '/:name',
-    uploadStudentImage.any(),
+    uploadUniformImage.any(),
     cleanUploaderFileOnFinish,
     validateUpdateUniform,
     updateUniform
@@ -47,7 +50,7 @@ router.put(
 
 router.put('/:name/activate', validateUniformName, activateUniform);
 
-router.put('/:name/desactivate', validateUniformName, deactivateUniform);
+router.put('/:name/deactivate', validateUniformName, deactivateUniform);
 
 router.use(deleteFileOnError);
 

@@ -4,6 +4,7 @@ import {
     createAdmin,
     getCoordinators,
     getCoordinatorById,
+    getMyCoordinatorProfile,
     updateCoordinator,
     deleteCoordinator,
     activateCoordinator,
@@ -20,6 +21,10 @@ import {
 } from '../../middlewares/coordinator-validators.js';
 
 const router = Router();
+
+// Endpoint accesible para cualquier usuario autenticado (admin o coordinador)
+// para obtener su propio perfil de coordinador (incluye su grado).
+router.get('/me', validateJWT, getMyCoordinatorProfile);
 
 router.use(validateJWT, validateAdmin);
 

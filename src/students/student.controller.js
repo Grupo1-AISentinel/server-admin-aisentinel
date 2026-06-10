@@ -28,18 +28,17 @@ export const createStudent = async (req, res, next) => {
         });
         await student.save();
 
-        const io = req.app.get('socketio');
-
-        const photosBinary = req.files.map(file => ({
-            buffer: file.buffer, 
-            mimetype: file.mimetype
-        }));
-
-        io.emit('enviar_a_python', {
-            nombre: `${req.body.studentName} ${req.body.studentSurname}`,
-            carnet: req.body.idCard,
-            fotos: photosBinary 
-        });
+        const { default: pyimageClient } = await import('../../utils/pyimage-client.js');
+        const fotos = req.files.map((file) => ({ buffer: file.buffer, mimetype: file.mimetype }));
+        try {
+            await pyimageClient.registerStudent({
+                carnet: req.body.idCard,
+                nombre: `${req.body.studentName} ${req.body.studentSurname}`,
+                fotos,
+            });
+        } catch (pyErr) {
+            console.warn(`[students] pyimage register fallo (continúa): ${pyErr.message}`);
+        }
 
         res.status(201).json({
             success: true,
@@ -59,6 +58,7 @@ export const getStudents = async (req, res, next) => {
         const parsedLimit = parseInt(limit);
         const filter = {};
         if (isActive !== undefined) filter.isActive = isActive === 'true';
+        if (req.coordinatorGrade) filter.grade = req.coordinatorGrade;
 
         const students = await Student.find(filter)
             .limit(parsedLimit)
@@ -93,6 +93,13 @@ export const getStudentById = async (req, res, next) => {
             return res.status(404).json({
                 success: false,
                 message: 'Estudiante no encontrado',
+            });
+        }
+
+        if (req.coordinatorGrade && student.grade !== req.coordinatorGrade) {
+            return res.status(403).json({
+                success: false,
+                message: `Solo puede consultar estudiantes del grado ${req.coordinatorGrade}.`,
             });
         }
 
@@ -226,6 +233,9 @@ export const getStudentByIdCard = async (req, res, next) => {
         const { idCard } = req.params;
         const student = await Student.findOne({ idCard });
         if (!student) return res.status(404).json({ success: false, message: 'Estudiante no encontrado' });
+        if (req.coordinatorGrade && student.grade !== req.coordinatorGrade) {
+            return res.status(403).json({ success: false, message: `Solo puede consultar estudiantes del grado ${req.coordinatorGrade}.` });
+        }
         res.status(200).json({ success: true, data: student });
     } catch (error) { next(error); }
 };
@@ -306,4 +316,77 @@ export const autoSyncStudents = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
+};
+
+/**
+ * Crea multiples estudiantes de una sola vez (usado por helpers/seed-assets.js).
+ * Body (JSON): { students: [{ idCard, studentName, studentSurname, email, grade, imagePaths: [absPath1, ...] }] }
+ * Auth: x-internal-token (no JWT, no rol).
+ *
+ * Por cada estudiante: crea en Mongo, lee los archivos locales, los envia
+ * a pyimage para generar embeddings faciales, igual que createStudent.
+ * Skip silencioso si el idCard ya existe.
+ */
+export const createStudentsBulk = async (req, res, next) => {
+    const fs = await import('fs');
+    const { default: pyimageClient } = await import('../../utils/pyimage-client.js');
+
+    const students = Array.isArray(req.body?.students) ? req.body.students : [];
+    const results = { created: 0, skipped: 0, embeddings: 0, failed: 0, errors: [] };
+
+    for (const s of students) {
+        try {
+            if (!s.idCard || !s.studentName) {
+                results.failed += 1;
+                results.errors.push({ idCard: s.idCard, error: 'idCard y studentName son requeridos' });
+                continue;
+            }
+            const imagePaths = Array.isArray(s.imagePaths) ? s.imagePaths : [];
+            if (imagePaths.length < 3) {
+                results.failed += 1;
+                results.errors.push({ idCard: s.idCard, error: 'minimo 3 imagenes' });
+                continue;
+            }
+            const fotos = [];
+            for (const p of imagePaths) {
+                const buf = fs.readFileSync(p);
+                fotos.push({ buffer: buf, mimetype: 'image/jpeg' });
+            }
+
+            const exists = await Student.findOne({ idCard: s.idCard });
+            if (!exists) {
+                await Student.create({
+                    studentName: s.studentName,
+                    studentSurname: s.studentSurname || '',
+                    email: s.email,
+                    idCard: s.idCard,
+                    grade: s.grade || '6TO',
+                });
+                results.created += 1;
+            } else {
+                results.skipped += 1;
+            }
+
+            // SIEMPRE enviar las fotos a pyimage para generar embeddings faciales,
+            // aunque el Student ya exista en Mongo. save_student_vector hace upsert
+            // (no duplica). Esto resuelve el caso donde el auto-sync Mongo de pyimage
+            // creo los docs pero los embeddings ChromaDB nunca se generaron.
+            try {
+                const r = await pyimageClient.registerStudent({
+                    carnet: s.idCard,
+                    nombre: `${s.studentName} ${s.studentSurname || ''}`.trim(),
+                    fotos,
+                });
+                if (r && r.status === 'success') results.embeddings += 1;
+                else if (r && r.message) console.warn(`[students-bulk] ${s.idCard}: ${r.message}`);
+            } catch (pyErr) {
+                console.warn(`[students-bulk] pyimage fallo para ${s.idCard}: ${pyErr.message}`);
+            }
+        } catch (e) {
+            results.failed += 1;
+            results.errors.push({ idCard: s.idCard, error: e.message });
+        }
+    }
+
+    res.status(200).json({ success: true, ...results });
 };

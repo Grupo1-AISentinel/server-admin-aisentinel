@@ -1,7 +1,25 @@
 import { COORDINATOR_ROLE } from '../../middlewares/validate-role.js'
 import Inspection from './inspection.model.js'
 import Coordinator from '../coordinator/coordinator.model.js'
+import { createNotification } from '../notifications/notification.controller.js'
 import axios from 'axios'
+
+export const getInspections = async (req, res, next) => {
+    try {
+        const filter = {};
+        if (req.userRole === COORDINATOR_ROLE) {
+            const coordinator = await Coordinator.findOne({ authUserId: req.userId });
+            if (!coordinator) {
+                return res.status(403).json({ success: false, message: 'No se encontró el perfil de coordinador.' });
+            }
+            filter.grade = coordinator.grade;
+        }
+        const inspections = await Inspection.find(filter).sort({ grade: 1 });
+        res.status(200).json({ success: true, data: inspections });
+    } catch (error) {
+        next(error);
+    }
+};
 
 export const toggleInspection = async (req, res, next) => {
     try {
@@ -62,9 +80,31 @@ export const toggleInspection = async (req, res, next) => {
             })
         }
 
+        const isActive = inspection.isActive;
+        const notifType = isActive ? 'INSPECTION_STARTED' : 'INSPECTION_STOPPED';
+        const notifTitle = isActive ? 'Inspección iniciada' : 'Inspección detenida';
+        const notifMessage = isActive
+            ? `Inspección de uniformes activada en ${grade}.`
+            : `Inspección de uniformes desactivada en ${grade}.`;
+
+        await createNotification({
+            type: notifType,
+            title: notifTitle,
+            message: notifMessage,
+            data: { grade },
+            target: { role: 'COORDINATOR_ROLE', grade },
+        });
+        await createNotification({
+            type: notifType,
+            title: notifTitle,
+            message: notifMessage,
+            data: { grade },
+            target: { role: 'ADMIN_ROLE' },
+        });
+
         return res.status(200).json({
             success: true,
-            message: inspection.isActive
+            message: isActive
                 ? 'Inspección activada'
                 : 'Inspección desactivada',
             data: inspection
