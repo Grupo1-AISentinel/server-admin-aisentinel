@@ -118,6 +118,24 @@ const buildUniformsPayload = () => {
             }
             continue;
         }
+        // Pantalon oficial: carpeta plana con fotos de cuerpo completo.
+        // pyimage extrae SOLO los crops de clase pant/pants via YOLO, asi
+        // que las mismas fotos de referencia del uniforme sirven de fuente.
+        // Sin esta rama el catalogo queda sin tipo "pants" y la regla
+        // "pantalon siempre requerido" marca a TODOS como infractores.
+        if (top === 'pants' || top === 'pant') {
+            const images = listImages(topPath);
+            if (images.length > 0) {
+                payload.push({
+                    name: 'pantalon_oficial',
+                    type: 'PANTS',
+                    imagePaths: images,
+                    estado: null,
+                    marca: top,
+                });
+            }
+            continue;
+        }
         for (const estado of fs.readdirSync(topPath)) {
             const sub = path.join(topPath, estado);
             if (!fs.statSync(sub).isDirectory()) continue;

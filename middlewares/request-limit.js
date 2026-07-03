@@ -6,6 +6,18 @@ const isInternalRequest = (req) => {
     return Boolean(token && token === process.env.INTERNAL_API_TOKEN);
 };
 
+// La subida de frames de camara (POST .../cameras/:cameraId/frame) ya tiene
+// su propio limitador (frameUploadLimit, ver mas abajo: 3000 req/60s por
+// usuario, calibrado para streaming en vivo). requestLimit se monta con
+// app.use() ANTES de los routers especificos (configs/app.js), asi que
+// aplica a TODAS las rutas por igual: 600 req/15min es razonable para uso
+// normal de la API, pero una sola camara subiendo frames cada 150ms agota
+// esa cuota en ~9s y bloquea la IP/usuario por el resto de la ventana de
+// 15 minutos para TODA la API (no solo el streaming) — medido en vivo:
+// causaba 429 "Demasiadas peticiones..." intermitentes en /cameras/:id/frame
+// que el usuario percibia como el feed de monitoreo trabandose.
+const isFrameUploadRequest = (req) => /\/cameras\/[^/]+\/frame(?:$|\?)/.test(req.path);
+
 const parsePositiveInt = (value, fallback) => {
     const parsed = parseInt(value, 10);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -29,7 +41,7 @@ const autoDetectionMax = parsePositiveInt(
 export const requestLimit = rateLimit({
     windowMs: requestWindowMs,
     max: requestMax,
-    skip: isInternalRequest,
+    skip: (req) => isInternalRequest(req) || isFrameUploadRequest(req),
     message: {
         success: false,
         message: 'Demasiadas peticiones desde esta IP, intenta de nuevo más tarde.',

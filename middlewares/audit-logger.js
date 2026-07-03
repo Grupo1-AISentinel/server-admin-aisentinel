@@ -23,9 +23,16 @@ const summarizeEndpoint = (url) => {
   return parts[0] || 'recurso';
 };
 
+// Los frames de camara llegan ~1.25/s por camara de forma continua;
+// auditarlos genera millones de documentos diarios sin valor (el body
+// multipart no deja details utiles) y presiona la misma DB del hot path.
+const FRAME_UPLOAD_REGEX = /^\/AISentinelAdmin\/v1\/cameras\/[^/]+\/frame(\?|$)/;
+
 export const auditLogger = (req, res, next) => {
     res.on('finish', async () => {
         const modificadores = ['POST', 'PUT', 'DELETE', 'PATCH'];
+
+        if (FRAME_UPLOAD_REGEX.test(req.originalUrl)) return;
 
         if (res.statusCode >= 200 && res.statusCode < 300 && modificadores.includes(req.method)) {
             try {

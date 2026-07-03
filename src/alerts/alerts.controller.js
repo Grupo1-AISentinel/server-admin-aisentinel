@@ -84,7 +84,10 @@ export const processAutomaticDetectionInternal = async (body) => {
 
     if (!idCard) {
         if (io) {
-            io.emit('detection:alert', {
+            // Rooms en vez de broadcast global: solo quien observa la camara
+            // (room camera:<id>, ya usada por detection:live_frame) y los
+            // admins reciben el payload (~40-60KB con imagen base64).
+            io.to(`camera:${cameraId}`).to('role:ADMIN_ROLE').emit('detection:alert', {
                 _id: `unknown-${Date.now()}`,
                 cameraId: cameraId || null,
                 studentCard: null,
@@ -263,7 +266,7 @@ export const processAutomaticDetectionInternal = async (body) => {
     }
 
     if (io) {
-        io.emit('detection:alert', {
+        io.to(`camera:${cameraId}`).to('role:ADMIN_ROLE').emit('detection:alert', {
             _id: alertaActiva._id?.toString?.() || alertaActiva._id,
             cameraId: cameraId || null,
             studentCard: idCard,
@@ -340,7 +343,7 @@ export const simulateAlert = async (req, res) => {
             grade: isUnknown ? null : 'TEST',
         };
         if (io) {
-            io.emit('detection:alert', payload);
+            io.to(`camera:${cameraId}`).to('role:ADMIN_ROLE').emit('detection:alert', payload);
             console.log(`[alerts] Simulated alert emitted for ${cameraId} (${isUnknown ? 'unknown' : studentCard})`);
         }
         return res.status(200).json({ success: true, detection: payload });

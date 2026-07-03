@@ -12,19 +12,21 @@ const LOCAL_SOURCES = ['webcam', 'video', 'ip'];
 
 const frameThrottle = new Map();
 // Throttle per (userId, cameraId) en ms. El frontend envia a
-// FRAME_INTERVAL_MS (800ms en el uploader). 750ms deja margen
-// de 50ms sobre el timestamp de INICIO del request para tolerar
+// FRAME_INTERVAL_MS (150ms en el uploader); 100ms deja 50ms de
+// margen sobre el timestamp de INICIO del request para tolerar
 // jitter del timer del navegador sin activar 429. El timestamp
 // se setea al inicio del request (no al final), asi que el
 // throttle mide tiempo entre requests INICIADAS (no completadas),
 // que es lo que naturalmente ocurre cada FRAME_INTERVAL_MS.
+// El cliente ademas trata el 429 como transitorio (sin backoff
+// exponencial), asi que un 429 espurio solo pierde un frame.
 //
 // FIX FASE 1A: ademas del throttle, ignoramos el `last` si tiene
-// mas de THROTTLE_NEW_SESSION_MS (1.5s = ~2x FRAME_INTERVAL_MS).
+// mas de THROTTLE_NEW_SESSION_MS (1.5s = ~10x FRAME_INTERVAL_MS).
 // Esto evita el 429 del primer request de una nueva sesion
 // (reload, nueva pestana, login fresco): si el gap es >1.5s,
 // asumimos que el `last` es de la sesion anterior y dejamos pasar.
-const FRAME_THROTTLE_MS = 750;
+const FRAME_THROTTLE_MS = 100;
 const THROTTLE_NEW_SESSION_MS = 1500;
 
 const readJpegDimensions = (buffer) => {
@@ -187,6 +189,10 @@ export const createCamera = async (req, res, next) => {
         existing.status = existing.status || 'offline';
       }
       await existing.save();
+      // Aviso liviano para que los sockets ya conectados re-emitan
+      // subscribe_cameras y se unan al room camera:<id> de esta camara
+      // (detection:alert ya no es broadcast global).
+      if (io) io.emit('cameras:changed', { cameraId: existing.cameraId });
       return res.status(200).json({
         success: true,
         camera: existing,
@@ -208,6 +214,8 @@ export const createCamera = async (req, res, next) => {
       sourceConfig: sanitizeSourceConfig(source, sourceConfig),
       createdBy: req.userId || null,
     });
+
+    if (io) io.emit('cameras:changed', { cameraId: camera.cameraId });
 
     res.status(201).json({ success: true, camera });
   } catch (error) {
@@ -524,6 +532,15 @@ export const uploadFrame = async (req, res, next) => {
       const tEnd = Date.now();
       const tPyimage = (globalThis.__diagLastPyimageTs && (tEnd - globalThis.__diagLastPyimageTs)) || '?';
       console.log(`[DIAG][frame-upload] camera=${cameraId} total=${tEnd - now}ms pyimage_ms=${tPyimage} students=${result?.students?.length || 0}`);
+    }
+
+    // pyimage reporta timeouts/errores de inferencia con un status
+    // explicito (p. ej. "Error: timeout de inferencia"). No emitir un
+    // live_frame vacio en ese caso: para el operador seria indistinguible
+    // de "no hay nadie frente a la camara".
+    if (result?.status && result.status !== 'Procesado') {
+      console.warn(`[frame-upload] camera=${cameraId} pyimage: ${result.status}`);
+      return res.status(200).json({ success: true, skipped: true, reason: result.status });
     }
 
     const students = result?.students || [];
