@@ -12,7 +12,7 @@ const LOCAL_SOURCES = ['webcam', 'video', 'ip'];
 
 const frameThrottle = new Map();
 // Throttle per (userId, cameraId) en ms. El frontend envia a
-// FRAME_INTERVAL_MS (150ms en el uploader); 100ms deja 50ms de
+// FRAME_INTERVAL_MS (80ms en el uploader); 45ms deja 35ms de
 // margen sobre el timestamp de INICIO del request para tolerar
 // jitter del timer del navegador sin activar 429. El timestamp
 // se setea al inicio del request (no al final), asi que el
@@ -22,11 +22,15 @@ const frameThrottle = new Map();
 // exponencial), asi que un 429 espurio solo pierde un frame.
 //
 // FIX FASE 1A: ademas del throttle, ignoramos el `last` si tiene
-// mas de THROTTLE_NEW_SESSION_MS (1.5s = ~10x FRAME_INTERVAL_MS).
+// mas de THROTTLE_NEW_SESSION_MS (1.5s = ~15x FRAME_INTERVAL_MS).
 // Esto evita el 429 del primer request de una nueva sesion
 // (reload, nueva pestana, login fresco): si el gap es >1.5s,
 // asumimos que el `last` es de la sesion anterior y dejamos pasar.
-const FRAME_THROTTLE_MS = 100;
+// 45ms: piso minimo entre frames aceptados. Debe quedar por DEBAJO del
+// FRAME_INTERVAL_MS del uploader (80ms) con margen (~35ms) para absorber el
+// jitter del timer del navegador sin devolver 429. Bajado de 60->45 al subir
+// la cadencia del uploader 100->80 (mas fps de analisis del uniforme).
+const FRAME_THROTTLE_MS = 45;
 const THROTTLE_NEW_SESSION_MS = 1500;
 
 const readJpegDimensions = (buffer) => {
@@ -384,7 +388,7 @@ export const uploadCameraVideo = (req, res, next) => {
   }
 };
 
-const toLiveFramePayload = (cameraId, results, studentMap) => {
+const toLiveFramePayload = (cameraId, results, studentMap, frameId, frameTimestamp, playheadTime) => {
   const frameSize = results?.videoSize || null;
   const students = (results?.students || []).map((s) => {
     const meta = studentMap.get(s.student_id);
@@ -427,6 +431,9 @@ const toLiveFramePayload = (cameraId, results, studentMap) => {
     timestamp: new Date().toISOString(),
     videoSize: frameSize,
     students,
+    frameId: frameId || null,
+    frameTimestamp: frameTimestamp ? parseInt(frameTimestamp, 10) : null,
+    playheadTime: playheadTime ? parseFloat(playheadTime) : null,
   };
 };
 
@@ -498,10 +505,10 @@ export const uploadFrame = async (req, res, next) => {
     // Importante: el timestamp se setea al INICIO del request (al
     // arrival del frame), NO al final. Asi el throttle mide "tiempo
     // minimo entre frames que llegan al admin", que coincide con el
-    // FRAME_INTERVAL_MS del uploader (800ms). Si se setea al final,
+    // FRAME_INTERVAL_MS del uploader (80ms). Si se setea al final,
     // el tiempo entre completions es (interval - processing), y con
-    // 200ms de procesamiento de pyimage el margen se evapora y el
-    // throttle salta con 429 aunque el cliente respete los 800ms.
+    // el procesamiento de pyimage el margen se evapora y el
+    // throttle salta con 429 aunque el cliente respete los 80ms.
     //
     // FIX FASE 1A: ademas del throttle, si el `last` es de hace mas
     // de THROTTLE_NEW_SESSION_MS lo ignoramos. Esto evita el 429
@@ -549,7 +556,8 @@ export const uploadFrame = async (req, res, next) => {
     if (fallbackVideoSize && !result?.videoSize) {
       result.videoSize = fallbackVideoSize;
     }
-    const liveFrame = toLiveFramePayload(cameraId, result, studentMap);
+    const { frameId, frameTimestamp, playheadTime } = req.body;
+    const liveFrame = toLiveFramePayload(cameraId, result, studentMap, frameId, frameTimestamp, playheadTime);
 
     if (camera.status !== 'online') {
       Camera.updateOne(
