@@ -1,4 +1,10 @@
+import axios from 'axios';
 import Student from './student.model.js';
+
+const fetchImageBuffer = async (url) => {
+    const response = await axios.get(url, { responseType: 'arraybuffer', timeout: 15000 });
+    return Buffer.from(response.data);
+};
 
 export const createStudent = async (req, res, next) => {
     try {
@@ -29,13 +35,26 @@ export const createStudent = async (req, res, next) => {
         await student.save();
 
         const { default: pyimageClient } = await import('../../utils/pyimage-client.js');
-        const fotos = req.files.map((file) => ({ buffer: file.buffer, mimetype: file.mimetype }));
+
+        const fotos = [];
+        for (const file of req.files) {
+            try {
+                const buffer = await fetchImageBuffer(file.path);
+                fotos.push({ buffer, mimetype: file.mimetype });
+            } catch (downloadErr) {
+                console.warn(`[students] no se pudo descargar ${file.path} para generar el embedding: ${downloadErr.message}`);
+            }
+        }
+
         try {
-            await pyimageClient.registerStudent({
+            const result = await pyimageClient.registerStudent({
                 carnet: req.body.idCard,
                 nombre: `${req.body.studentName} ${req.body.studentSurname}`,
                 fotos,
             });
+            if (!result || result.status !== 'success') {
+                console.warn(`[students] pyimage no genero el embedding para ${req.body.idCard}: ${result?.message}`);
+            }
         } catch (pyErr) {
             console.warn(`[students] pyimage register fallo (continúa): ${pyErr.message}`);
         }
